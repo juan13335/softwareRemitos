@@ -1,0 +1,62 @@
+# ==========================================
+# Secretos y Entorno (Supabase / APIs)
+# ==========================================
+.env
+.env*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Claves de servicios y credenciales
+*.pem
+*.key
+keys/
+credentials.json
+
+# ==========================================
+# Dependencias
+# ==========================================
+node_modules/
+*/node_modules/
+.pnp
+.pnp.js
+
+# ==========================================
+# Builds y Salidas de Compilación
+# ==========================================
+dist/
+dist-ssr/
+build/
+*.local
+
+# ==========================================
+# Archivos temporales y subidas locales
+# ==========================================
+temp/
+uploads/
+*/temp/
+*/uploads/
+
+# ==========================================
+# Logs y Depuración
+# ==========================================
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ==========================================
+# Sistema Operativo y Editores
+# ==========================================
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
