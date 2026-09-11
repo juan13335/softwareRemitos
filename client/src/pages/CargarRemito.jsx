@@ -25,15 +25,45 @@ export default function CargarRemito() {
   const [socioId, setSocioId] = useState("");
   const [cargandoSocios, setCargandoSocios] = useState(true);
 
+
   // Estados del formulario
   const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
-  const [nroRemito, setNroRemito] = useState("");
-  const [nroFactura, setNroFactura] = useState("");
+  const [puntoVenta, setPuntoVenta] = useState("0001");
+  const [numeroRemito, setNumeroRemito] = useState("");
+  const [letraFactura, setLetraFactura] = useState("A");
+  const [pvFactura, setPvFactura] = useState("00013");
+  const [numeroFactura, setNumeroFactura] = useState("");
   const [sinFactura, setSinFactura] = useState(false);
   const [notas, setNotas] = useState("");
   const [items, setItems] = useState([nuevoItem()]);
   const [guardando, setGuardando] = useState(false);
   const [errorForm, setErrorForm] = useState(null);
+
+  // Rellena con ceros a la izquierda cuando el usuario hace clic afuera (onBlur)
+  const formatearNumero = () => {
+    if (!numeroRemito) return;
+    const soloNumeros = numeroRemito.replace(/\D/g, "");
+    setNumeroRemito(soloNumeros.padStart(8, "0").slice(-8));
+  };
+
+  const formatearPV = () => {
+    const soloNumeros = puntoVenta.replace(/\D/g, "");
+    setPuntoVenta(soloNumeros.padStart(4, "0").slice(-4));
+  };
+
+  const formatearPvFactura = () => {
+    if (!pvFactura) return;
+    const soloNumeros = pvFactura.replace(/\D/g, ""); // \D para eliminar todo lo que no sea dígito y /g busca coincidencias globales en toda la cadena
+    setPvFactura(soloNumeros.padStart(5, "0").slice(-5)); // padStart(5, "0") asegura que tenga al menos 5 dígitos, rellenando con ceros a la izquierda si es necesario.
+    //  slice(-5) toma los últimos 5 dígitos en caso de que el usuario ingrese más de 5 dígitos.
+  };
+
+  // Relleno a 8 dígitos para el número
+  const formatearNumeroFactura = () => {
+    if (!numeroFactura) return;
+    const soloNumeros = numeroFactura.replace(/\D/g, "");
+    setNumeroFactura(soloNumeros.padStart(8, "0").slice(-8));
+  };
 
   // Llamada al endpoint GET /api/socios al montar el componente
   useEffect(() => {
@@ -84,14 +114,14 @@ export default function CargarRemito() {
     setErrorForm(null);
 
     if (!socioId) {
-    setErrorForm("Debés seleccionar un socio.");
-    return;
-  }
+      setErrorForm("Debés seleccionar un socio.");
+      return;
+    }
 
-  if (!nroRemito.trim()) {
-    setErrorForm("El número de remito es obligatorio.");
-    return;
-  }
+    if (!numeroRemito.trim()) {
+      setErrorForm("El número de remito es obligatorio.");
+      return;
+    }
 
     const itemsValidos = items.filter((it) => it.productoId && it.cantidad > 0);
     if (itemsValidos.length === 0) {
@@ -99,19 +129,24 @@ export default function CargarRemito() {
       return;
     }
 
+    const nroRemitoCompleto = `${puntoVenta.padStart(4, "0")} - ${numeroRemito.padStart(8, "0")}`;
+    const nroFacturaCompleto =
+      sinFactura || !numeroFactura.trim()
+        ? null
+        : `${letraFactura.toUpperCase()} - ${pvFactura.padStart(5, "0")} - ${numeroFactura.padStart(8, "0")}`;
     // Payload adaptado a tu modelo de Express y Supabase
     const payload = {
-    fecha,
-    nro_remito: nroRemito.trim(),
-    nro_factura: sinFactura ? null : nroFactura.trim() || null,
-    socio_id: socioId, // UUID obtenido del GET
-    notas: notas.trim() || null,
-    items: itemsValidos.map((it) => ({
-      producto_id: it.productoId,
-      cantidad: Number(it.cantidad),
-      precio_unitario: Number(it.precioUnitario),
-    })),
-  };
+      fecha,
+      nro_remito: nroRemitoCompleto, // Queda guardado ej: "0001 - 00000412"
+      nro_factura: nroFacturaCompleto, // Queda guardado ej: "A - 00013 - 00000412" o null si no hay factura
+      socio_id: socioId, // UUID obtenido del GET
+      notas: notas.trim() || null,
+      items: itemsValidos.map((it) => ({
+        producto_id: it.productoId,
+        cantidad: Number(it.cantidad),
+        precio_unitario: Number(it.precioUnitario),
+      })),
+    };
 
     setGuardando(true);
     try {
@@ -151,26 +186,26 @@ export default function CargarRemito() {
         <h2 className="mb-4 text-base font-bold text-stone-900">Datos del comprobante</h2>
 
         <div className="mb-4 flex flex-wrap gap-4">
-            {/* Selector de Socio */}
-            <label className="flex flex-col gap-1.5">
+          {/* Selector de Socio */}
+          <label className="flex flex-col gap-1.5">
             <span className="text-sm text-stone-500">Socio</span>
             <select
-                value={socioId}
-                disabled={cargandoSocios}
-                onChange={(e) => setSocioId(e.target.value)}
-                className="rounded-lg border border-stone-200 bg-stone-100 px-3 py-2.5 text-base text-stone-800 focus:bg-white focus:outline-2 focus:outline-amber-500 disabled:opacity-50"
+              value={socioId}
+              disabled={cargandoSocios}
+              onChange={(e) => setSocioId(e.target.value)}
+              className="rounded-lg border border-stone-200 bg-stone-100 px-3 py-2.5 text-base text-stone-800 focus:bg-white focus:outline-2 focus:outline-amber-500 disabled:opacity-50"
             >
-                {cargandoSocios ? (
+              {cargandoSocios ? (
                 <option value="">Cargando socios...</option>
-                ) : (
+              ) : (
                 socios.map((s) => (
-                    <option key={s.id} value={s.id}>
+                  <option key={s.id} value={s.id}>
                     {s.nombre}
-                    </option>
+                  </option>
                 ))
-                )}
+              )}
             </select>
-            </label>
+          </label>
           <label className="flex min-w-[180px] flex-1 flex-col gap-1.5">
             <span className="text-sm text-stone-500">Fecha</span>
             <input
@@ -181,27 +216,83 @@ export default function CargarRemito() {
             />
           </label>
 
-          <label className="flex min-w-[180px] flex-1 flex-col gap-1.5">
+          {/* N° de remito con formato automático */}
+          <div className="flex min-w-[240px] flex-1 flex-col gap-1.5">
             <span className="text-sm text-stone-500">N° de remito</span>
-            <input
-              type="text"
-              placeholder="Ej: R-000413"
-              value={nroRemito}
-              onChange={(e) => setNroRemito(e.target.value)}
-              className="rounded-lg border border-stone-200 bg-stone-100 px-3 py-2.5 text-base text-stone-800 placeholder:text-stone-400 focus:bg-white focus:outline-2 focus:outline-amber-500"
-            />
-          </label>
+            <div className="flex items-center rounded-lg border border-stone-200 bg-stone-100 px-3 py-2.5 focus-within:border-amber-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-amber-500">
+              {/* Punto de venta (4 dígitos) */}
+              <input
+                type="text"
+                maxLength={4}
+                value={puntoVenta}
+                onChange={(e) => setPuntoVenta(e.target.value.replace(/\D/g, ""))}
+                onBlur={formatearPV}
+                className="w-14 bg-transparent text-center font-mono text-base font-semibold text-stone-800 outline-none"
+              />
+
+              <span className="px-2 font-mono text-stone-400 font-bold">—</span>
+
+              {/* Número correlativo (8 dígitos) */}
+              <input
+                type="text"
+                maxLength={8}
+                placeholder="00000000"
+                value={numeroRemito}
+                onChange={(e) => setNumeroRemito(e.target.value.replace(/\D/g, ""))}
+                onBlur={formatearNumero}
+                className="w-full bg-transparent font-mono text-base font-semibold text-stone-800 placeholder:text-stone-400 outline-none"
+              />
+            </div>
+          </div>
 
           <label className="flex min-w-[180px] flex-1 flex-col gap-1.5">
-            <span className="text-sm text-stone-500">N° de factura</span>
-            <input
-              type="text"
-              placeholder="Ej: FC-0001-4590"
-              value={nroFactura}
-              disabled={sinFactura}
-              onChange={(e) => setNroFactura(e.target.value)}
-              className="rounded-lg border border-stone-200 bg-stone-100 px-3 py-2.5 text-base text-stone-800 placeholder:text-stone-400 focus:bg-white focus:outline-2 focus:outline-amber-500 disabled:opacity-50"
-            />
+            {/* N° de factura estructurado */}
+            <div className="flex min-w-[280px] flex-1 flex-col gap-1.5">
+              <span className="text-sm text-stone-500">N° de factura</span>
+              <div
+                className={`flex items-center rounded-lg border border-stone-200 bg-stone-100 px-3 py-1.5 transition-all ${sinFactura
+                    ? "opacity-40 cursor-not-allowed"
+                    : "focus-within:border-amber-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-amber-500"
+                  }`}
+              >
+                {/* Letra (A, B, C, etc.) */}
+                <input
+                  type="text"
+                  maxLength={1}
+                  disabled={sinFactura}
+                  value={letraFactura}
+                  onChange={(e) => setLetraFactura(e.target.value.toUpperCase())}
+                  className="w-6 bg-transparent text-center font-mono text-base font-semibold text-stone-800 outline-none uppercase disabled:cursor-not-allowed"
+                />
+
+                <span className="px-1.5 font-mono font-bold text-stone-400">—</span>
+
+                {/* Punto de venta (5 dígitos) */}
+                <input
+                  type="text"
+                  maxLength={5}
+                  disabled={sinFactura}
+                  value={pvFactura}
+                  onChange={(e) => setPvFactura(e.target.value.replace(/\D/g, ""))}
+                  onBlur={formatearPvFactura}
+                  className="w-16 bg-transparent text-center font-mono text-base font-semibold text-stone-800 outline-none disabled:cursor-not-allowed"
+                />
+
+                <span className="px-1.5 font-mono font-bold text-stone-400">—</span>
+
+                {/* Número correlativo (8 dígitos) */}
+                <input
+                  type="text"
+                  maxLength={8}
+                  placeholder="00000000"
+                  disabled={sinFactura}
+                  value={numeroFactura}
+                  onChange={(e) => setNumeroFactura(e.target.value.replace(/\D/g, ""))}
+                  onBlur={formatearNumeroFactura}
+                  className="w-full bg-transparent font-mono text-base font-semibold text-stone-800 placeholder:text-stone-400 outline-none disabled:cursor-not-allowed"
+                />
+              </div>
+            </div>
           </label>
         </div>
 

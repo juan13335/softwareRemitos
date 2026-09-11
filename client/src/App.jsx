@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./pages/dashboard.jsx";
 import CargarRemito from "./pages/CargarRemito.jsx";
+import DetalleRemito from "./pages/DetalleRemitos.jsx";
 
 export default function App() {
   return (
@@ -11,6 +12,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/remitos/nuevo" element={<CargarRemito />} />
+          <Route path="/remitos/:id" element={<DetalleRemito />} />
         </Routes>
       </div>
     </BrowserRouter>
