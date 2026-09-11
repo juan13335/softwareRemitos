@@ -42,9 +42,10 @@ export const getRemitos = async (req, res) => {
 };
 
 // GET /api/remitos/:nro_remito - Trae un solo remito por su número
-export const getRemitoByNroRemito = async (req, res) => {
+// GET /api/remitos/:id - Trae un solo remito por su UUID
+export const getRemitoById = async (req, res) => {
   try {
-    const { nro_remito } = req.params;
+    const { id } = req.params;
 
     const { data, error } = await supabase
       .from('v_remitos_con_totales')
@@ -70,15 +71,15 @@ export const getRemitoByNroRemito = async (req, res) => {
           )
         )
       `)
-      .eq('nro_remito', nro_remito)
+      .eq('id', id)
       .single();
 
     if (error) {
+      // PGRST116 es el código de PostgREST cuando .single() no encuentra filas
+      if (error.code === 'PGRST116') {
+        return res.status(404).json({ error: 'Remito no encontrado' });
+      }
       return res.status(500).json({ error: error.message });
-    }
-
-    if (!data) {
-      return res.status(404).json({ error: 'Remito no encontrado' });
     }
 
     return res.status(200).json(data);
@@ -291,6 +292,48 @@ export const updateRemito = async (req, res) => {
     });
 
   } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+
+// DELETE /api/remitos/:id - Elimina un remito y sus ítems asociados
+export const deleteRemito = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // 1. Borramos los ítems vinculados primero (para evitar bloqueos por FK)
+    const { error: errorItems } = await supabase
+      .from("remito_items_socio")
+      .delete()
+      .eq("remito_id", id);
+
+    if (errorItems) {
+      return res.status(500).json({ error: errorItems.message });
+    }
+
+    // 2. Borramos la cabecera del remito
+    const { data, error: errorRemito } = await supabase
+      .from("remitos_socio")
+      .delete()
+      .eq("id", id)
+      .select(); // .select() devuelve la fila que se acaba de eliminar
+
+    if (errorRemito) {
+      return res.status(500).json({ error: errorRemito.message });
+    }
+
+    // Si data viene vacío, significa que el UUID no existía en la base
+    if (!data || data.length === 0) {
+      return res.status(404).json({ error: "El remito no existe o ya fue eliminado." });
+    }
+
+    return res.status(200).json({
+      message: "Remito e ítems eliminados correctamente.",
+      remitoEliminado: data[0],
+    });
+  } catch (error) {
+    console.error("Error en deleteRemito:", error);
     return res.status(500).json({ error: error.message });
   }
 };

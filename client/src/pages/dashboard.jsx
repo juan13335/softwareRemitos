@@ -7,7 +7,7 @@ import { api } from "../api/api.js";
 
 const KPIS = [
   { label: "Total pendiente a pagar", value: "$ 545.000", delta: "a 1 socio", icon: Clock, tint: "bg-amber-50 text-amber-700" },
-  { label: "Total transferido", value: "$ 655.000", delta: "este año", icon: Check, tint: "bg-emerald-50 text-emerald-700" },
+  { label: "Total transferido", value: "$ 0", delta: "este año", icon: Check, tint: "bg-emerald-50 text-emerald-700" },
 ];
 
 const QUICK_ACTIONS = [
@@ -71,6 +71,40 @@ export default function Dashboard() {
     return `${d}/${m}/${y}`;
   };
 
+  // 1. Estado de cobro real
+const esCobrado = (r) => r.estado_cobro_socio?.toLowerCase() === "cobrado";
+
+// 2. Montos acumulados
+const totalPendiente = remitos
+  .filter((r) => !esCobrado(r))
+  .reduce((acc, r) => acc + (Number(r.total) || 0), 0);
+
+const totalTransferido = remitos
+  .filter((r) => esCobrado(r))
+  .reduce((acc, r) => acc + (Number(r.total) || 0), 0);
+
+// 3. Cantidades
+const cantPendientes = remitos.filter((r) => !esCobrado(r)).length;
+const cantCobrados = remitos.filter((r) => esCobrado(r)).length;
+
+// 4. KPIs
+const kpis = [
+  {
+    label: "Total pendiente a pagar",
+    value: formatMoneda(totalPendiente),
+    delta: `${cantPendientes} ${cantPendientes === 1 ? "remito pendiente" : "remitos pendientes"}`,
+    icon: Clock,
+    tint: "bg-amber-50 text-amber-700",
+  },
+  {
+    label: "Total transferido",
+    value: formatMoneda(totalTransferido),
+    delta: `${cantCobrados} ${cantCobrados === 1 ? "remito cobrado" : "remitos cobrados"}`,
+    icon: Check,
+    tint: "bg-emerald-50 text-emerald-700",
+  },
+];
+
   return (
     <main className="mx-auto w-full max-w-6xl px-5 py-8 md:px-9">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
@@ -84,16 +118,20 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* KPIs */}
+      {/* Grid de KPIs */}
       <div className="mb-7 grid grid-cols-2 gap-4 lg:grid-cols-2">
-        {KPIS.map(({ label, value, delta, icon: Icon, tint }) => (
+        {kpis.map(({ label, value, delta, icon: Icon, tint }) => (
           <div key={label} className="rounded-xl border border-stone-200 bg-white p-5">
             <div className={`mb-3.5 flex h-9 w-9 items-center justify-center rounded-lg ${tint}`}>
               <Icon size={18} />
             </div>
             <div className="mb-1.5 text-sm text-stone-500">{label}</div>
-            <div className="text-2xl font-bold text-stone-900">{value}</div>
-            <div className="mt-1.5 text-xs text-stone-500">{delta}</div>
+            <div className="text-2xl font-bold text-stone-900">
+              {cargando ? "—" : value}
+            </div>
+            <div className="mt-1.5 text-xs text-stone-500">
+              {cargando ? "calculando..." : delta}
+            </div>
           </div>
         ))}
       </div>

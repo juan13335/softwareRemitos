@@ -6,7 +6,7 @@ const NAV_ITEMS = [
   { icon: Users, label: "Socios", path: "/socios" },
   { icon: Package, label: "Remitos", path: "/remitos/nuevo" },
   { icon: CreditCard, label: "Pagos", path: "/pagos" },
-  { icon: FileText, label: "Productos", path: "/productos" },
+  { icon: FileText, label: "Productos", path: "/productos/nuevo" },
 ];
 
 export default function Sidebar() {

@@ -87,7 +87,6 @@ export default function DetalleRemito() {
     (acc, it) => acc + (Number(it.cantidad) || 0) * (Number(it.precio_unitario) || 0),
     0
   );
-  const esCobrado = Boolean(remito.nro_factura);
 
   return (
     <main className="mx-auto w-full max-w-3xl px-5 py-8 md:px-9">
@@ -105,7 +104,6 @@ export default function DetalleRemito() {
         <div>
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-bold text-stone-900">Remito {remito.nro_remito}</h1>
-            <EstadoRemito estado={esCobrado ? "cobrado" : "pendiente"} />
           </div>
           <div className="mt-1 flex items-center gap-1.5 text-sm text-stone-500">
             <User size={14} /> Socio: {remito.socio?.nombre || "—"}
@@ -152,7 +150,7 @@ export default function DetalleRemito() {
           <div>
             <div className="text-sm text-stone-500">Estado</div>
             <div className="mt-0.5">
-              <EstadoRemito estado={esCobrado ? "cobrado" : "pendiente"} />
+              <EstadoRemito estado={remito.estado_cobro_socio ? "cobrado" : "pendiente"} />
             </div>
           </div>
         </div>
