@@ -13,6 +13,7 @@ export default function RegistrarPago() {
   // 1. Datos del backend
   const [socios, setSocios] = useState([]);
   const [socioId, setSocioId] = useState("");
+  const [saldoAFavorDisponible, setSaldoAFavorDisponible] = useState(0);
   const [remitosPendientes, setRemitosPendientes] = useState([]);
   const [cargandoRemitos, setCargandoRemitos] = useState(false);
 
@@ -91,6 +92,24 @@ export default function RegistrarPago() {
     }
 
     fetchRemitos();
+  }, [socioId]);
+
+  // Saldo a favor 
+  useEffect(() => {
+    if (!socioId) return;
+
+    async function fetchSaldoAFavor() {
+      try {
+        // Endpoint que consulta la vista v_socios_anticipos
+        const res = await api.get(`/socios/anticipo/${socioId}`);
+        setSaldoAFavorDisponible(Number(res.data?.saldo_a_favor || 0));
+      } catch (err) {
+        console.error("Error al traer saldo a favor:", err);
+        setSaldoAFavorDisponible(0);
+      }
+    }
+
+    fetchSaldoAFavor();
   }, [socioId]);
 
   // Total de dinero ingresado en formas de pago
@@ -213,6 +232,24 @@ export default function RegistrarPago() {
       setGuardando(false);
     }
   }
+  // Verifica si ya se agregó el saldo a favor a la lista de pagos
+  const yaUsoSaldoAFavor = formasPago.some(
+    (f) => f.forma.toLowerCase() === "saldo a favor"
+  );
+
+  // Función para cargarlo automáticamente con un clic
+  function aplicarSaldoAFavor() {
+    if (saldoAFavorDisponible <= 0 || yaUsoSaldoAFavor) return;
+
+    setFormasPago((prev) => [
+      ...prev,
+      {
+        id: "saldo-a-favor",
+        forma: "Saldo a favor",
+        monto: saldoAFavorDisponible,
+      },
+    ]);
+  }
 
   return (
     <main className="mx-auto w-full max-w-3xl px-5 py-8 md:px-9 text-stone-800">
@@ -253,28 +290,73 @@ export default function RegistrarPago() {
             </select>
           </div>
 
-          {remitosPendientes.length > 0 && (
-            <div className="flex items-center gap-2.5 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              <Clock size={16} className="shrink-0" />
-              Saldo pendiente total:{" "}
-              <b className="font-semibold">
-                {formatoMoneda(
-                  remitosPendientes.reduce((acc, r) => acc + r.saldoPendiente, 0)
-                )}
-              </b>
-              {" · "}
-              {remitosPendientes.length} remito{remitosPendientes.length !== 1 ? "s" : ""} con saldo
-            </div>
-          )}
+          {/* Estado de cuenta del socio */}
+          <div className="flex flex-col gap-2.5">
+            {remitosPendientes.length > 0 && (
+              <div className="flex items-center gap-2.5 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800 border border-amber-200/60">
+                <Clock size={16} className="shrink-0 text-amber-700" />
+                <div>
+                  Deuda pendiente en remitos:{" "}
+                  <b className="font-semibold">
+                    {formatoMoneda(
+                      remitosPendientes.reduce((acc, r) => acc + r.saldoPendiente, 0)
+                    )}
+                  </b>
+                  {" · "}
+                  {remitosPendientes.length} remito{remitosPendientes.length !== 1 ? "s" : ""} con saldo
+                </div>
+              </div>
+            )}
+
+            {saldoAFavorDisponible > 0 && (
+              <div className="flex items-center gap-2.5 rounded-lg bg-sky-50 px-4 py-3 text-sm text-sky-800 border border-sky-200/60">
+                <Wallet size={16} className="shrink-0 text-sky-600" />
+                <div>
+                  Saldo a favor con el socio:{" "}
+                  <b className="font-semibold">{formatoMoneda(saldoAFavorDisponible)}</b>
+                  {" · "}
+                  (adelanto disponible para aplicar)
+                </div>
+              </div>
+            )}
+          </div>
         </section>
 
-        {/* 1. Formas de pago recibidas */}
         <section className="mb-5 rounded-xl border border-stone-200 bg-white p-6">
-          <h2 className="mb-1 text-base font-bold text-stone-900">1. Dinero cobrado</h2>
+          <h2 className="mb-1 text-base font-bold text-stone-900">1. Dinero pagado al socio</h2>
           <p className="mb-4 text-sm text-stone-500">
-            Ingresá el dinero que entregó el cliente para habilitar las imputaciones.
+            Ingresá las transferencias realizadas o aplicá saldo a favor de pagos anteriores.
           </p>
 
+          {/* Banner si el socio tiene saldo a favor acumulado */}
+          {saldoAFavorDisponible > 0 && (
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-200 bg-sky-50 p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-100 text-sky-700">
+                  <Wallet size={20} />
+                </div>
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wider text-sky-800">
+                    Adelanto / Saldo a favor
+                  </div>
+                  <div className="text-sm text-sky-900">
+                    Tenés <b className="font-bold">{formatoMoneda(saldoAFavorDisponible)}</b> disponibles por pagos anteriores.
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={aplicarSaldoAFavor}
+                disabled={yaUsoSaldoAFavor}
+                className="rounded-lg bg-sky-700 px-3.5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-sky-800 disabled:bg-sky-300 disabled:cursor-not-allowed"
+              >
+                {yaUsoSaldoAFavor ? "✓ Saldo aplicado" : "+ Usar saldo a favor"}
+              </button>
+            </div>
+          )}
+
+          {/* Carga de pagos adicionales (Transferencias, Efectivo, etc.) */}
           <div className="mb-4 flex flex-wrap items-end gap-3">
             <label className="flex min-w-[160px] flex-col gap-1.5">
               <span className="text-sm text-stone-500">Forma de pago</span>
@@ -318,29 +400,50 @@ export default function RegistrarPago() {
             </button>
           </div>
 
+          {/* Lista de formas agregadas */}
           {formasPago.length > 0 && (
             <div className="flex flex-col gap-2">
-              {formasPago.map((f) => (
-                <div key={f.id} className="flex items-center justify-between rounded-lg border border-stone-200 p-3">
-                  <span className="text-sm font-semibold text-stone-800">{f.forma}</span>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-bold text-stone-800">{formatoMoneda(f.monto)}</span>
-                    <button
-                      type="button"
-                      onClick={() => eliminarFormaPago(f.id)}
-                      title="Quitar"
-                      className="flex h-8 w-8 items-center justify-center rounded-lg text-red-600 hover:bg-red-50"
-                    >
-                      <X size={16} />
-                    </button>
+              {formasPago.map((f) => {
+                const esCreditoAFavor = f.forma.toLowerCase() === "saldo a favor";
+                return (
+                  <div
+                    key={f.id}
+                    className={`flex items-center justify-between rounded-lg border p-3 ${esCreditoAFavor
+                      ? "border-sky-200 bg-sky-50/50"
+                      : "border-stone-200 bg-white"
+                      }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-stone-800">{f.forma}</span>
+                      {esCreditoAFavor && (
+                        <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-semibold text-sky-800">
+                          CRÉDITO PREVIO
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-bold text-stone-800">
+                        {formatoMoneda(f.monto)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => eliminarFormaPago(f.id)}
+                        title="Quitar"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-red-600 hover:bg-red-50"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
+          {/* Total disponible para imputar */}
           <div className="mt-4 flex items-baseline justify-end gap-2 border-t border-stone-200 pt-4">
-            <span className="text-sm text-stone-500">Total recibido:</span>
+            <span className="text-sm text-stone-500">Total disponible para cancelar:</span>
             <span className="text-2xl font-bold text-emerald-700">{formatoMoneda(totalPago)}</span>
           </div>
         </section>
@@ -365,10 +468,10 @@ export default function RegistrarPago() {
                   {totalPago === 0
                     ? "Primero cargá una forma de pago"
                     : saldoSinAplicar <= 0
-                    ? "Ya consumiste todo el dinero cobrado"
-                    : remitosDisponibles.length === 0
-                    ? "No hay más remitos con deuda"
-                    : "Seleccioná un remito"}
+                      ? "Ya consumiste todo el dinero cobrado"
+                      : remitosDisponibles.length === 0
+                        ? "No hay más remitos con deuda"
+                        : "Seleccioná un remito"}
                 </option>
                 {remitosDisponibles.map((r) => (
                   <option key={r.id} value={r.id}>

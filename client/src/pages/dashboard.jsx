@@ -12,8 +12,8 @@ const KPIS = [
 
 const QUICK_ACTIONS = [
   { label: "Cargar nuevo remito", icon: Plus, path: "/remitos/nuevo"},
-  { label: "Registrar pago", icon: CreditCard },
-  { label: "Agregar socio", icon: Users },
+  { label: "Registrar pago", icon: CreditCard, path: "/pagos/nuevo" },
+  { label: "Agregar socio", icon: Users, path: "/socios/nuevo" },
 ];
 
 export default function Dashboard() {
@@ -60,7 +60,7 @@ export default function Dashboard() {
   // Suma total acumulada de lo que esté tildado
   const totalSeleccionado = remitos
     .filter((r) => seleccionados.includes(r.id || r.nro_remito))
-    .reduce((acc, r) => acc + (Number(r.total) || 0), 0);
+    .reduce((acc, r) => acc + (Number(r.saldo_pendiente) || 0), 0);
 
   const formatMoneda = (val) =>
     new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(val || 0);
@@ -72,16 +72,19 @@ export default function Dashboard() {
   };
 
   // 1. Estado de cobro real
-const esCobrado = (r) => r.estado_cobro_cliente?.toLowerCase() === "cobrado";
+const esCobrado = (r) => {
+  const estado = r.estado_cobro_cliente?.toLowerCase();
+  return estado === "cobrado" || estado === "parcial";
+};
 
 // 2. Montos acumulados
 const totalPendiente = remitos
   .filter((r) => !esCobrado(r))
-  .reduce((acc, r) => acc + (Number(r.total) || 0), 0);
+  .reduce((acc, r) => acc + (Number(r.saldo_pendiente) || 0), 0);
 
 const totalTransferido = remitos
   .filter((r) => esCobrado(r))
-  .reduce((acc, r) => acc + (Number(r.total) || 0), 0);
+  .reduce((acc, r) => acc + (Number(r.total_imputado) || 0), 0);
 
 // 3. Cantidades
 const cantPendientes = remitos.filter((r) => !esCobrado(r)).length;
@@ -166,7 +169,7 @@ const kpis = [
             className="h-4 w-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
           />
         </th>
-        {["Fecha", "Socio", "N° remito", "N° factura", "Total", "Estado"].map((h) => (
+        {["Fecha", "Socio", "N° remito", "N° factura", "Total", "Saldo Pendiente", "Estado"].map((h) => (
           <th key={h} className="border-b border-stone-200 pb-2.5 text-left text-xs font-semibold text-stone-500">
             {h}
           </th>
@@ -220,10 +223,11 @@ const kpis = [
               <td className="border-b border-stone-100 py-3.5 font-medium">{r.nro_remito}</td>
               <td className="border-b border-stone-100 py-3.5 text-stone-500">{r.nro_factura || "—"}</td>
               <td className="border-b border-stone-100 py-3.5 font-bold">{formatMoneda(r.total)}</td>
+              <td className="border-b border-stone-100 py-3.5 font-bold">{formatMoneda(r.saldo_pendiente)}</td>
               <td className="border-b border-stone-100 py-3.5">
                 <EstadoRemito estado={r.estado_cobro_cliente} />
               </td>
-
+          
               {/* Botón con el ojo para ver detalle */}
               <td className="border-b border-stone-100 py-3.5 pr-3 text-right">
                 <button
