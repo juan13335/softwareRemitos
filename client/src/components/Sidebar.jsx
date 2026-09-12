@@ -5,7 +5,7 @@ const NAV_ITEMS = [
   { icon: Home, label: "Inicio", path: "/" },
   { icon: Users, label: "Socios", path: "/socios" },
   { icon: Package, label: "Remitos", path: "/remitos/nuevo" },
-  { icon: CreditCard, label: "Pagos", path: "/pagos" },
+  { icon: CreditCard, label: "Pagos", path: "/pagos/nuevo" },
   { icon: FileText, label: "Productos", path: "/productos/nuevo" },
 ];
 

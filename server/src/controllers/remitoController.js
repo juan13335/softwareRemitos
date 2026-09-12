@@ -13,6 +13,8 @@ export const getRemitos = async (req, res) => {
         fecha,
         created_at,
         total,
+        total_imputado,
+        saldo_pendiente,
         socio:socios (
           id,
           nombre,
@@ -41,6 +43,32 @@ export const getRemitos = async (req, res) => {
   }
 };
 
+
+export const getRemitosBySocio = async (req, res) => {
+  const { socio_id } = req.params;
+
+  if (!socio_id) {
+    return res.status(400).json({ error: "El socio_id es obligatorio." });
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("v_remitos_con_totales")
+      .select("*")
+      .eq("socio_id", socio_id)
+      .order("fecha", { ascending: false });
+
+    if (error) throw error;
+
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error("Error al obtener remitos por socio:", error);
+    return res.status(500).json({
+      error: error.message || "Error interno al consultar los remitos.",
+    });
+  }
+};
+
 // GET /api/remitos/:nro_remito - Trae un solo remito por su número
 // GET /api/remitos/:id - Trae un solo remito por su UUID
 export const getRemitoById = async (req, res) => {
@@ -55,6 +83,9 @@ export const getRemitoById = async (req, res) => {
         nro_factura,
         fecha,
         created_at,
+        total,
+        total_imputado,
+        saldo_pendiente,
         socio:socios (
           id,
           nombre,
