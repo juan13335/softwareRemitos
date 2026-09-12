@@ -30,7 +30,7 @@ export default function DetalleRemito() {
   useEffect(() => {
     const fetchDetalle = async () => {
       try {
-        const res = await api.get(`/remitos/${id}`);
+        const res = await api.get(`/remitos/detalle/${id}`);
         setRemito(res.data);
       } catch (err) {
         console.error("Error al cargar detalle del remito:", err);
@@ -150,7 +150,7 @@ export default function DetalleRemito() {
           <div>
             <div className="text-sm text-stone-500">Estado</div>
             <div className="mt-0.5">
-              <EstadoRemito estado={remito.estado_cobro_socio ? "cobrado" : "pendiente"} />
+              <EstadoRemito estado={remito.estado_cobro_cliente} />
             </div>
           </div>
         </div>

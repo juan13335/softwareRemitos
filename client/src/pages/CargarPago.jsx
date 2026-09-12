@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Check, User, Clock, Plus, X, Wallet, Loader2 } from "lucide-react";
+import { Check, User, Clock, Plus, X, Wallet, Loader2, CheckCircle2 } from "lucide-react";
 import { api } from "../api/api";
 
 const FORMAS_PAGO = ["Efectivo", "Transferencia", "Cheque", "Tarjeta"];
@@ -16,25 +16,25 @@ export default function RegistrarPago() {
   const [remitosPendientes, setRemitosPendientes] = useState([]);
   const [cargandoRemitos, setCargandoRemitos] = useState(false);
 
-  // 2. Formas de pago recibidas (pago_metodos)
+  // 2. Formas de pago recibidas (Entrada a caja)
   const [formasPago, setFormasPago] = useState([]);
   const [formaNueva, setFormaNueva] = useState(FORMAS_PAGO[0]);
   const [montoFormaNueva, setMontoFormaNueva] = useState("");
 
-  // 3. Imputaciones a remitos (pago_remitos)
+  // 3. Remitos en orden de imputación
   const [remitoParaAgregar, setRemitoParaAgregar] = useState("");
   const [remitosAplicados, setRemitosAplicados] = useState([]);
 
-  // 4. Cabecera (pagos_socio)
+  // 4. Cabecera
   const [fechaPago, setFechaPago] = useState(new Date().toISOString().slice(0, 10));
   const [nroComprobante, setNroComprobante] = useState("");
   const [notas, setNotas] = useState("");
 
-  // 5. Feedback y control
+  // 5. Estado de UI
   const [guardando, setGuardando] = useState(false);
   const [errorFeedback, setErrorFeedback] = useState(null);
 
-  // Carga de socios con tu cliente api
+  // Carga de socios
   useEffect(() => {
     async function fetchSocios() {
       try {
@@ -52,7 +52,7 @@ export default function RegistrarPago() {
     fetchSocios();
   }, []);
 
-  // Carga de remitos del socio
+  // Carga remitos del socio
   useEffect(() => {
     if (!socioId) return;
 
@@ -93,11 +93,39 @@ export default function RegistrarPago() {
     fetchRemitos();
   }, [socioId]);
 
-  // Cálculos en pantalla
-  const saldoPendienteTotal = useMemo(
-    () => remitosPendientes.reduce((acc, r) => acc + r.saldoPendiente, 0),
-    [remitosPendientes]
+  // Total de dinero ingresado en formas de pago
+  const totalPago = useMemo(
+    () => formasPago.reduce((acc, f) => acc + (parseFloat(f.monto) || 0), 0),
+    [formasPago]
   );
+
+  // DESCUENTO AUTOMÁTICO EN CASCADA
+  // Cada remito toma automáticamente lo que necesita del pozo hasta agotarlo
+  const remitosConImputacion = useMemo(() => {
+    let pozoDisponible = totalPago;
+
+    return remitosAplicados.map((r) => {
+      const aCubrir = Math.min(r.saldoPendiente, Math.max(pozoDisponible, 0));
+      pozoDisponible -= aCubrir;
+      const quedaDebiendo = r.saldoPendiente - aCubrir;
+
+      return {
+        ...r,
+        montoImputado: aCubrir,
+        quedaDebiendo,
+        esTotal: quedaDebiendo === 0,
+        esParcial: quedaDebiendo > 0 && aCubrir > 0,
+        sinFondos: aCubrir === 0,
+      };
+    });
+  }, [remitosAplicados, totalPago]);
+
+  const totalAplicado = useMemo(
+    () => remitosConImputacion.reduce((acc, r) => acc + r.montoImputado, 0),
+    [remitosConImputacion]
+  );
+
+  const saldoSinAplicar = totalPago - totalAplicado;
 
   const idsAplicados = useMemo(
     () => new Set(remitosAplicados.map((r) => r.id)),
@@ -105,24 +133,6 @@ export default function RegistrarPago() {
   );
 
   const remitosDisponibles = remitosPendientes.filter((r) => !idsAplicados.has(r.id));
-
-  const totalPago = useMemo(
-    () => formasPago.reduce((acc, f) => acc + (parseFloat(f.monto) || 0), 0),
-    [formasPago]
-  );
-
-  const totalAplicado = useMemo(
-    () => remitosAplicados.reduce((acc, r) => acc + (parseFloat(r.montoImputado) || 0), 0),
-    [remitosAplicados]
-  );
-
-  const saldoSinAplicar = totalPago - totalAplicado;
-
-  const hayExcesoPorRemito = remitosAplicados.some(
-    (r) =>
-      (parseFloat(r.montoImputado) || 0) > r.saldoPendiente ||
-      (parseFloat(r.montoImputado) || 0) <= 0
-  );
 
   function cambiarSocio(id) {
     setSocioId(id);
@@ -141,21 +151,12 @@ export default function RegistrarPago() {
     setFormasPago((prev) => prev.filter((f) => f.id !== id));
   }
 
+  // Agrega el remito a la fila; la imputación se descuenta sola en tiempo real
   function agregarRemito() {
     const remito = remitosPendientes.find((r) => r.id === remitoParaAgregar);
     if (!remito) return;
-
-    setRemitosAplicados((prev) => [
-      ...prev,
-      { ...remito, montoImputado: String(remito.saldoPendiente) },
-    ]);
+    setRemitosAplicados((prev) => [...prev, remito]);
     setRemitoParaAgregar("");
-  }
-
-  function actualizarMontoImputado(id, monto) {
-    setRemitosAplicados((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, montoImputado: monto } : r))
-    );
   }
 
   function quitarRemito(id) {
@@ -165,17 +166,24 @@ export default function RegistrarPago() {
   const puedeGuardar =
     formasPago.length > 0 &&
     remitosAplicados.length > 0 &&
-    saldoSinAplicar >= 0 &&
-    !hayExcesoPorRemito &&
+    totalAplicado > 0 &&
     !guardando;
 
-  // Envío al backend usando api.post
+  // Envío final
   async function handleSubmit(e) {
     e.preventDefault();
     if (!puedeGuardar) return;
 
     setErrorFeedback(null);
     setGuardando(true);
+
+    // Solo enviamos líneas que hayan absorbido dinero (> 0)
+    const lineas = remitosConImputacion
+      .filter((r) => r.montoImputado > 0)
+      .map((r) => ({
+        remito_id: r.id,
+        monto_imputado: r.montoImputado,
+      }));
 
     const payload = {
       socio_id: socioId,
@@ -187,10 +195,7 @@ export default function RegistrarPago() {
         forma: f.forma.toLowerCase(),
         monto: Number(f.monto),
       })),
-      lineas: remitosAplicados.map((r) => ({
-        remito_id: r.id,
-        monto_imputado: Number(r.montoImputado),
-      })),
+      lineas,
     };
 
     try {
@@ -200,7 +205,7 @@ export default function RegistrarPago() {
       setRemitosAplicados([]);
       setNroComprobante("");
       setNotas("");
-      alert("Pago registrado y remitos actualizados con éxito.");
+      alert("¡Pago registrado con éxito!");
     } catch (err) {
       console.error("Error al registrar pago:", err);
       setErrorFeedback(err.response?.data?.error || err.message || "Error al procesar el pago.");
@@ -248,21 +253,26 @@ export default function RegistrarPago() {
             </select>
           </div>
 
-          {saldoPendienteTotal > 0 && (
+          {remitosPendientes.length > 0 && (
             <div className="flex items-center gap-2.5 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
               <Clock size={16} className="shrink-0" />
-              Saldo pendiente total: <b className="font-semibold">{formatoMoneda(saldoPendienteTotal)}</b>
+              Saldo pendiente total:{" "}
+              <b className="font-semibold">
+                {formatoMoneda(
+                  remitosPendientes.reduce((acc, r) => acc + r.saldoPendiente, 0)
+                )}
+              </b>
               {" · "}
               {remitosPendientes.length} remito{remitosPendientes.length !== 1 ? "s" : ""} con saldo
             </div>
           )}
         </section>
 
-        {/* Formas de pago recibidas */}
+        {/* 1. Formas de pago recibidas */}
         <section className="mb-5 rounded-xl border border-stone-200 bg-white p-6">
-          <h2 className="mb-1 text-base font-bold text-stone-900">¿Cuánto y cómo pagó el cliente?</h2>
+          <h2 className="mb-1 text-base font-bold text-stone-900">1. Dinero cobrado</h2>
           <p className="mb-4 text-sm text-stone-500">
-            Cargá cada forma de pago por separado si entregó, por ejemplo, parte en efectivo y parte por transferencia.
+            Ingresá el dinero que entregó el cliente para habilitar las imputaciones.
           </p>
 
           <div className="mb-4 flex flex-wrap items-end gap-3">
@@ -335,11 +345,11 @@ export default function RegistrarPago() {
           </div>
         </section>
 
-        {/* Aplicar a remitos */}
+        {/* 2. Aplicar a remitos (Descuento automático) */}
         <section className="mb-5 rounded-xl border border-stone-200 bg-white p-6">
-          <h2 className="mb-1 text-base font-bold text-stone-900">Aplicar a remitos</h2>
+          <h2 className="mb-1 text-base font-bold text-stone-900">2. Imputar remitos</h2>
           <p className="mb-4 text-sm text-stone-500">
-            Elegí qué remitos se cubren con el total recibido. El monto se precarga con el saldo pendiente, pero podés editarlo si es un pago parcial.
+            Elegí qué remitos cubrir. El saldo cobrado se irá descontando automáticamente en el orden que los cargues.
           </p>
 
           <div className="mb-4 flex flex-wrap items-end gap-3">
@@ -348,20 +358,21 @@ export default function RegistrarPago() {
               <select
                 value={remitoParaAgregar}
                 onChange={(e) => setRemitoParaAgregar(e.target.value)}
-                disabled={cargandoRemitos || remitosDisponibles.length === 0}
+                disabled={cargandoRemitos || remitosDisponibles.length === 0 || saldoSinAplicar <= 0}
                 className="rounded-lg border border-stone-200 bg-stone-100 px-3 py-2.5 text-base text-stone-800 focus:bg-white focus:outline-2 focus:outline-amber-500 disabled:opacity-50"
               >
                 <option value="">
-                  {cargandoRemitos
-                    ? "Cargando remitos..."
+                  {totalPago === 0
+                    ? "Primero cargá una forma de pago"
+                    : saldoSinAplicar <= 0
+                    ? "Ya consumiste todo el dinero cobrado"
                     : remitosDisponibles.length === 0
-                    ? "No hay más remitos con saldo"
+                    ? "No hay más remitos con deuda"
                     : "Seleccioná un remito"}
                 </option>
                 {remitosDisponibles.map((r) => (
                   <option key={r.id} value={r.id}>
-                    {r.nroRemito} · {r.fecha} · saldo {formatoMoneda(r.saldoPendiente)}
-                    {r.saldoPendiente < r.total ? " (parcial)" : ""}
+                    {r.nroRemito} · {r.fecha} · Debe {formatoMoneda(r.saldoPendiente)}
                   </option>
                 ))}
               </select>
@@ -369,7 +380,7 @@ export default function RegistrarPago() {
             <button
               type="button"
               onClick={agregarRemito}
-              disabled={!remitoParaAgregar}
+              disabled={!remitoParaAgregar || saldoSinAplicar <= 0}
               className="flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-40"
             >
               <Plus size={16} />
@@ -377,102 +388,91 @@ export default function RegistrarPago() {
             </button>
           </div>
 
-          {remitosAplicados.length === 0 ? (
+          {remitosConImputacion.length === 0 ? (
             <div className="rounded-lg bg-stone-100 px-4 py-6 text-center text-sm text-stone-500">
               Todavía no seleccionaste ningún remito para este pago.
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              <div className="hidden gap-3 px-1 text-xs font-semibold text-stone-500 sm:grid sm:grid-cols-[1fr_150px_32px]">
-                <span>Remito</span>
-                <span>Monto a imputar</span>
-                <span />
-              </div>
-
-              {remitosAplicados.map((r) => {
-                const monto = parseFloat(r.montoImputado) || 0;
-                const excedido = monto > r.saldoPendiente;
-                return (
-                  <div
-                    key={r.id}
-                    className="grid grid-cols-1 items-center gap-2 rounded-lg border border-stone-200 p-3 sm:grid-cols-[1fr_150px_32px] sm:p-2.5"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-stone-800">{r.nroRemito}</span>
-                        {r.saldoPendiente < r.total && (
-                          <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">
-                            PARCIAL
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs text-stone-500">
-                        {r.fecha} {r.nroFactura ? `· ${r.nroFactura}` : "· Sin factura"} · saldo{" "}
-                        {formatoMoneda(r.saldoPendiente)}
-                      </div>
+              {remitosConImputacion.map((r) => (
+                <div
+                  key={r.id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-stone-200 p-3.5 bg-stone-50"
+                >
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-stone-900">{r.nroRemito}</span>
+                      {r.esTotal && (
+                        <span className="flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
+                          <CheckCircle2 size={12} /> CANCELADO
+                        </span>
+                      )}
+                      {r.esParcial && (
+                        <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                          PAGO PARCIAL
+                        </span>
+                      )}
+                      {r.sinFondos && (
+                        <span className="rounded bg-stone-200 px-2 py-0.5 text-xs font-semibold text-stone-600">
+                          SIN SALDO
+                        </span>
+                      )}
                     </div>
+                    <div className="mt-0.5 text-xs text-stone-500">
+                      Deuda original: {formatoMoneda(r.saldoPendiente)}
+                      {r.quedaDebiendo > 0 && (
+                        <span className="ml-1 font-medium text-amber-700">
+                          · Quedará debiendo: {formatoMoneda(r.quedaDebiendo)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
 
-                    <div className="flex flex-col gap-1">
-                      <div
-                        className={
-                          "flex items-center gap-1 rounded-lg border bg-stone-100 px-2 focus-within:bg-white focus-within:outline-2 focus-within:outline-amber-500 " +
-                          (excedido ? "border-red-400 bg-red-50" : "border-stone-200")
-                        }
-                      >
-                        <span className="text-stone-400">$</span>
-                        <input
-                          type="number"
-                          min="0.01"
-                          step="0.01"
-                          max={r.saldoPendiente}
-                          value={r.montoImputado}
-                          onChange={(e) => actualizarMontoImputado(r.id, e.target.value)}
-                          className="w-full bg-transparent py-2 text-sm text-stone-800 outline-none"
-                        />
+                  {/* Vista fija del monto imputado (sin input editable) */}
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <div className="text-xs text-stone-500">Se le imputa:</div>
+                      <div className="text-base font-extrabold text-emerald-700">
+                        {formatoMoneda(r.montoImputado)}
                       </div>
-                      {excedido && <span className="text-xs text-red-600">Supera el saldo</span>}
                     </div>
 
                     <button
                       type="button"
                       onClick={() => quitarRemito(r.id)}
                       title="Quitar remito"
-                      className="flex h-9 w-9 items-center justify-center justify-self-end rounded-lg text-red-600 hover:bg-red-50 sm:justify-self-center"
+                      className="flex h-9 w-9 items-center justify-center rounded-lg text-red-600 hover:bg-red-100"
                     >
                       <X size={18} />
                     </button>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           )}
 
-          {/* Saldo en vivo */}
+          {/* Saldo disponible en mano */}
           <div
             className={
               "mt-4 flex items-center justify-between rounded-lg px-4 py-3.5 " +
               (saldoSinAplicar > 0
                 ? "bg-sky-50 text-sky-800"
-                : saldoSinAplicar < 0
-                ? "bg-red-50 text-red-700"
-                : "bg-emerald-50 text-emerald-700")
+                : "bg-emerald-50 text-emerald-800")
             }
           >
             <div className="flex items-center gap-2 text-sm font-medium">
               <Wallet size={16} />
               {saldoSinAplicar > 0
-                ? "Saldo restante a favor del cliente"
-                : saldoSinAplicar < 0
-                ? "Te pasaste del total recibido"
-                : "Todo el pago quedó aplicado"}
+                ? "Saldo disponible en mano para seguir imputando"
+                : "Todo el dinero cobrado ha sido imputado"}
             </div>
             <span className="text-xl font-bold">{formatoMoneda(saldoSinAplicar)}</span>
           </div>
         </section>
 
-        {/* Datos generales */}
+        {/* 3. Datos generales */}
         <section className="mb-5 rounded-xl border border-stone-200 bg-white p-6">
-          <h2 className="mb-4 text-base font-bold text-stone-900">Datos generales</h2>
+          <h2 className="mb-4 text-base font-bold text-stone-900">3. Datos del comprobante</h2>
 
           <div className="mb-5 flex flex-wrap gap-4">
             <label className="flex min-w-[180px] flex-1 flex-col gap-1.5">

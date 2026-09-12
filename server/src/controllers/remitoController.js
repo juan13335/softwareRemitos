@@ -12,6 +12,7 @@ export const getRemitos = async (req, res) => {
         nro_factura,
         fecha,
         created_at,
+        estado_cobro_cliente,
         total,
         total_imputado,
         saldo_pendiente,
@@ -69,7 +70,6 @@ export const getRemitosBySocio = async (req, res) => {
   }
 };
 
-// GET /api/remitos/:nro_remito - Trae un solo remito por su número
 // GET /api/remitos/:id - Trae un solo remito por su UUID
 export const getRemitoById = async (req, res) => {
   try {
@@ -83,6 +83,7 @@ export const getRemitoById = async (req, res) => {
         nro_factura,
         fecha,
         created_at,
+        estado_cobro_cliente,
         total,
         total_imputado,
         saldo_pendiente,

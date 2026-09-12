@@ -7,6 +7,6 @@ const router = Router();
 router.get('/', getRemitos);
 router.get('/:socio_id', getRemitosBySocio);
 router.post('/', createRemito);
-router.get('/:id', getRemitoById);
+router.get('/detalle/:id', getRemitoById);
 router.delete('/:id', deleteRemito);
 export default router;  

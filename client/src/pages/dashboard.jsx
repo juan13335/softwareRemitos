@@ -72,7 +72,7 @@ export default function Dashboard() {
   };
 
   // 1. Estado de cobro real
-const esCobrado = (r) => r.estado_cobro_socio?.toLowerCase() === "cobrado";
+const esCobrado = (r) => r.estado_cobro_cliente?.toLowerCase() === "cobrado";
 
 // 2. Montos acumulados
 const totalPendiente = remitos
@@ -221,14 +221,14 @@ const kpis = [
               <td className="border-b border-stone-100 py-3.5 text-stone-500">{r.nro_factura || "—"}</td>
               <td className="border-b border-stone-100 py-3.5 font-bold">{formatMoneda(r.total)}</td>
               <td className="border-b border-stone-100 py-3.5">
-                <EstadoRemito estado={r.estado_cobro_socio ? "cobrado" : "pendiente"} />
+                <EstadoRemito estado={r.estado_cobro_cliente} />
               </td>
 
               {/* Botón con el ojo para ver detalle */}
               <td className="border-b border-stone-100 py-3.5 pr-3 text-right">
                 <button
                   type="button"
-                  onClick={() => navigate(`/remitos/${r.id}`)}
+                  onClick={() => navigate(`/remitos/detalle/${r.id}`)}
                   title="Ver detalle del remito"
                   className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 hover:bg-stone-100 hover:text-stone-800 transition-colors cursor-pointer"
                 >

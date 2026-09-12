@@ -14,7 +14,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/remitos/nuevo" element={<CargarRemito />} />
-          <Route path="/remitos/:id" element={<DetalleRemito />} /> 
+          <Route path="/remitos/detalle/:id" element={<DetalleRemito />} /> 
           <Route path="/productos/nuevo" element={<CargarProducto />} />
           <Route path="/pagos/nuevo" element={<CargarPago />} />
         </Routes>
