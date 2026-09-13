@@ -74,16 +74,15 @@ export default function Dashboard() {
   // 1. Estado de cobro real
 const esCobrado = (r) => {
   const estado = r.estado_cobro_cliente?.toLowerCase();
-  return estado === "cobrado" || estado === "parcial";
+  return estado === "cobrado";
 };
+
 
 // 2. Montos acumulados
 const totalPendiente = remitos
-  .filter((r) => !esCobrado(r))
   .reduce((acc, r) => acc + (Number(r.saldo_pendiente) || 0), 0);
 
 const totalTransferido = remitos
-  .filter((r) => esCobrado(r))
   .reduce((acc, r) => acc + (Number(r.total_imputado) || 0), 0);
 
 // 3. Cantidades
