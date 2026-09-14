@@ -157,6 +157,7 @@ export default function CargarProducto() {
                   <span className="text-stone-400 font-semibold">$</span>
                   <input
                     type="number"
+                    required
                     min="0"
                     step="any"
                     placeholder="0"

@@ -66,7 +66,7 @@ export default function ListadoPagos() {
 
   if (loading) {
   return (
-    <main className=" flex min-h-[60vh] w-full max-w-5xl flex-col items-center justify-center gap-3 px-5 py-8 text-stone-500">
+    <main className="mx-auto flex min-h-[60vh] w-full max-w-5xl flex-col items-center justify-center gap-3 px-5 py-8 text-stone-500">
       <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
       <span className="text-sm font-medium">Cargando pagos...</span>
     </main>

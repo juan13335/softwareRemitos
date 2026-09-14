@@ -6,6 +6,7 @@ import DetalleRemito from "./pages/DetalleRemitos.jsx";
 import CargarProducto from "./pages/CargarProducto.jsx";
 import CargarPago from "./pages/CargarPago.jsx";  
 import ListadoPagos from "./pages/ListadoPago.jsx";
+import ListadoProductos from "./pages/ListadoProductos.jsx";
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
           <Route path="/productos/nuevo" element={<CargarProducto />} />
           <Route path="/pagos/nuevo" element={<CargarPago />} />
           <Route path="/pagos" element={<ListadoPagos />} />
+          <Route path="/productos" element={<ListadoProductos />} />
         </Routes>
       </div>
     </BrowserRouter>

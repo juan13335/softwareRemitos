@@ -5,7 +5,8 @@ export const getProductos = async (req, res) => {
   try {
     const { data, error } = await supabase
       .from("productos")
-      .select("id, nombre, precio_referencia")
+      .select("id, socio: socios (id, nombre), nombre, precio_referencia, activo ")
+      .filter("activo", "eq", true)
       .order("nombre", { ascending: true });
 
     if (error) throw error;
