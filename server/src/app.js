@@ -9,8 +9,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.use('/api/socios', sociosRoutes);
-app.use('/api/remitos', remitosRoutes);
-app.use('/api/productos', productosRoutes);
-app.use('/api/pagos', pagosRoutes);
+app.use('/socios', sociosRoutes);
+app.use('/remitos', remitosRoutes);
+app.use('/productos', productosRoutes);
+app.use('/pagos', pagosRoutes);
 export default app;
