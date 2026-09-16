@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { Check, User, Clock, Plus, X, Wallet, Loader2, CheckCircle2 } from "lucide-react";
-import { api } from "../api/api.js";
+import api from "../api/api.js";
 
 const FORMAS_PAGO = ["Efectivo", "Transferencia", "Cheque", "Tarjeta"];
 

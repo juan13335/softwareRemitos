@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Users, Package, CreditCard, Plus, Check, Clock, Calendar, Loader2, Eye} from "lucide-react";
 import EstadoRemito from "../components/EstadoRemito.jsx";
 import BarraPagoRemitos from "../components/BarraPagoRemitos.jsx";
-import { api } from "../api/api.js";
+import  api  from "../api/api.js";
 
 const KPIS = [
   { label: "Total pendiente a pagar", value: "$ 545.000", delta: "a 1 socio", icon: Clock, tint: "bg-amber-50 text-amber-700" },

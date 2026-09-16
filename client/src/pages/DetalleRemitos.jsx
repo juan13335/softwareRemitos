@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { User, Check, Pencil, Trash2, ArrowLeft, Loader2 } from "lucide-react";
 import EstadoRemito from "../components/EstadoRemito.jsx";
-import { api } from "../api/api";
+import  api  from "../api/api.js";
 
 function formatoMoneda(valor) {
   return new Intl.NumberFormat("es-AR", {
