@@ -49,6 +49,7 @@ export default function ListadoProductos() {
   // Filtro combinado: Socio + Texto (soporta snake_case y camelCase)
   const productosFiltrados = useMemo(() => {
     return productos.filter((p) => {
+      if (!p.activo) return false; // Solo mostrar productos activos
       // Compara contra el id dentro del objeto socio
       const coincideSocio = socioId === "todos" || p.socio?.id === socioId;
 
