@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Pencil, Trash2, Package, User, Plus, Search, Loader2 } from "lucide-react";
-import { api } from "../api/api.js"; // Ajustá la ruta según la ubicación de tu archivo api
+import  api  from "../api/api.js";
 
 function formatoMoneda(valor) {
   const num = Number(valor) || 0;

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Trash2, Check, User, Loader2 } from "lucide-react";
-import { api } from "../api/api";
+import  api from "../api/api.js";
 
 function nuevoItem() {
   return { id: crypto.randomUUID(), productoId: "", cantidad: 1, precioUnitario: 0 };
