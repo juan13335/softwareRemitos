@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { ChevronDown, ChevronRight, Receipt, User, Loader2 } from "lucide-react";
-import { api } from "../api/api.js"; // Ajustá la ruta a tu cliente axios
+import api  from "../api/api.js"; // Ajustá la ruta a tu cliente axios
 
 function formatoMoneda(valor) {
   const num = Number(valor) || 0;

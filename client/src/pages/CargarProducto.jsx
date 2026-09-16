@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import  Sidebar  from "../components/Sidebar.jsx";
 import { Check, User, Loader2 } from "lucide-react";
-import { api } from "../api/api";
+import  api from "../api/api.js";
 
 export default function CargarProducto() {
   const navigate = useNavigate();
