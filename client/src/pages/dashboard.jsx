@@ -1,23 +1,22 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { Users, Package, CreditCard, Plus, Check, Clock, Calendar, Loader2, Eye} from "lucide-react";
+import { Users, Package, CreditCard, Plus, Check, Clock, Calendar, Loader2, Eye, Wallet } from "lucide-react";
 import EstadoRemito from "../components/EstadoRemito.jsx";
 import BarraPagoRemitos from "../components/BarraPagoRemitos.jsx";
-import  api  from "../api/api.js";
+import api from "../api/api.js";
 
-const KPIS = [
-  { label: "Total pendiente a pagar", value: "$ 545.000", delta: "a 1 socio", icon: Clock, tint: "bg-amber-50 text-amber-700" },
-  { label: "Total transferido", value: "$ 0", delta: "este año", icon: Check, tint: "bg-emerald-50 text-emerald-700" },
-];
 
 const QUICK_ACTIONS = [
-  { label: "Cargar nuevo remito", icon: Plus, path: "/remitos/nuevo"},
+  { label: "Cargar nuevo remito", icon: Plus, path: "/remitos/nuevo" },
   { label: "Registrar pago", icon: CreditCard, path: "/pagos/nuevo" },
   { label: "Agregar socio", icon: Users, path: "/socios/nuevo" },
 ];
 
 export default function Dashboard() {
   const [remitos, setRemitos] = useState([]);
+  const [saldoAFavor, setSaldoAFavor] = useState(0);
+  const [socioId, setSocioId] = useState([]);
+  const [socios, setSocios] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
   const [seleccionados, setSeleccionados] = useState([]);
@@ -38,6 +37,39 @@ export default function Dashboard() {
 
     fetchRemitos();
   }, []);
+
+  useEffect(() => {
+    const fetchSocios = async () => {
+      try {
+        const res = await api.get("/socios");
+        setSocios(res.data);
+        if (res.data && res.data.length > 0) {
+        setSocioId(String(res.data[0].id));
+      }
+      } catch (err) {
+        console.error("Error al cargar socios:", err);
+      }
+    };
+    fetchSocios();
+  }, []);
+
+  useEffect(() => {
+    if (!socioId) {
+      setSaldoAFavor(0);
+      return;
+    }
+
+    const fetchSaldoAfavor = async () => {
+      try {
+        const res = await api.get(`/socios/anticipo/${socioId}`);
+        setSaldoAFavor(res.data.saldo_a_favor);
+      } catch (err) {
+        console.error("Error al cargar saldo a favor:", err);
+      }
+    };
+
+    fetchSaldoAfavor();
+  }, [socioId]);
 
   const toggleSeleccion = (id) => {
     setSeleccionados((prev) =>
@@ -72,40 +104,45 @@ export default function Dashboard() {
   };
 
   // 1. Estado de cobro real
-const esCobrado = (r) => {
-  const estado = r.estado_cobro_cliente?.toLowerCase();
-  return estado === "cobrado";
-};
+  const esCobrado = (r) => {
+    const estado = r.estado_cobro_cliente?.toLowerCase();
+    return estado === "cobrado";
+  };
 
+  // 2. Montos acumulados
+  const totalPendiente = remitos
+    .reduce((acc, r) => acc + (Number(r.saldo_pendiente) || 0), 0);
 
-// 2. Montos acumulados
-const totalPendiente = remitos
-  .reduce((acc, r) => acc + (Number(r.saldo_pendiente) || 0), 0);
+  const totalTransferido = remitos
+    .reduce((acc, r) => acc + (Number(r.total_imputado) || 0), 0);
 
-const totalTransferido = remitos
-  .reduce((acc, r) => acc + (Number(r.total_imputado) || 0), 0);
+  // 3. Cantidades
+  const cantPendientes = remitos.filter((r) => !esCobrado(r)).length;
+  const cantCobrados = remitos.filter((r) => esCobrado(r)).length;
 
-// 3. Cantidades
-const cantPendientes = remitos.filter((r) => !esCobrado(r)).length;
-const cantCobrados = remitos.filter((r) => esCobrado(r)).length;
-
-// 4. KPIs
-const kpis = [
-  {
-    label: "Total pendiente a pagar",
-    value: formatMoneda(totalPendiente),
-    delta: `${cantPendientes} ${cantPendientes === 1 ? "remito pendiente" : "remitos pendientes"}`,
-    icon: Clock,
-    tint: "bg-amber-50 text-amber-700",
-  },
-  {
-    label: "Total transferido",
-    value: formatMoneda(totalTransferido),
-    delta: `${cantCobrados} ${cantCobrados === 1 ? "remito cobrado" : "remitos cobrados"}`,
-    icon: Check,
-    tint: "bg-emerald-50 text-emerald-700",
-  },
-];
+  // 4. KPIs
+  const kpis = [
+    {
+      label: "Total pendiente a pagar",
+      value: formatMoneda(totalPendiente),
+      delta: `${cantPendientes} ${cantPendientes === 1 ? "remito pendiente" : "remitos pendientes"}`,
+      icon: Clock,
+      tint: "bg-amber-50 text-amber-700",
+    },
+    {
+      label: "Total transferido",
+      value: formatMoneda(totalTransferido),
+      delta: `${cantCobrados} ${cantCobrados === 1 ? "remito cobrado" : "remitos cobrados"}`,
+      icon: Check,
+      tint: "bg-emerald-50 text-emerald-700",
+    },
+    {
+      label: "Saldo A Favor",
+      value: formatMoneda(saldoAFavor),
+      icon: Wallet,
+      tint: "bg-emerald-50 text-emerald-700",
+    },
+  ];
 
   return (
     <main className="mx-auto w-full max-w-6xl px-5 py-8 md:px-9">
@@ -120,10 +157,10 @@ const kpis = [
         </div>
       </div>
 
-      {/* Grid de KPIs */}
-      <div className="mb-7 grid grid-cols-2 gap-4 lg:grid-cols-2">
+      {/* Grid de KPIs (ajustado a 3 columnas en pantallas medianas/grandes) */}
+      <div className="mb-7 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {kpis.map(({ label, value, delta, icon: Icon, tint }) => (
-          <div key={label} className="rounded-xl border border-stone-200 bg-white p-5">
+          <div key={label} className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
             <div className={`mb-3.5 flex h-9 w-9 items-center justify-center rounded-lg ${tint}`}>
               <Icon size={18} />
             </div>
@@ -139,123 +176,122 @@ const kpis = [
       </div>
 
       {/* Quick actions */}
-          <div className="mb-7 flex flex-col gap-3 sm:flex-row">
-              {QUICK_ACTIONS.map(({ label, icon: Icon, path }) => (
-                  <button
-                      key={label}
-                      onClick={() => path && navigate(path)}
-                      className="flex flex-1 items-center gap-3 rounded-xl border border-stone-200 bg-white p-4 text-left text-sm font-semibold text-stone-800 hover:border-amber-400 hover:bg-amber-50/40 transition-colors cursor-pointer"
-                  >
-                      <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
-                          <Icon size={17} />
-                      </span>
-                      {label}
-                  </button>
-              ))}
-          </div>
+      <div className="mb-7 flex flex-col gap-3 sm:flex-row">
+        {QUICK_ACTIONS.map(({ label, icon: Icon, path }) => (
+          <button
+            key={label}
+            onClick={() => path && navigate(path)}
+            className="flex flex-1 items-center gap-3 rounded-xl border border-stone-200 bg-white p-4 text-left text-sm font-semibold text-stone-800 hover:border-amber-400 hover:bg-amber-50/40 transition-colors cursor-pointer"
+          >
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
+              <Icon size={17} />
+            </span>
+            {label}
+          </button>
+        ))}
+      </div>
 
       {/* Tabla de remitos con selección múltiple */}
-<div className="overflow-x-auto">
-  <table className="w-full min-w-[660px] border-collapse text-sm">
-    <thead>
-      <tr>
-        {/* Checkbox Maestro */}
-        <th className="border-b border-stone-200 pb-2.5 pl-2 text-left w-10">
-          <input
-            type="checkbox"
-            checked={todosSeleccionados}
-            onChange={toggleTodos}
-            className="h-4 w-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
-          />
-        </th>
-        {["Fecha", "Socio", "N° remito", "N° factura", "Total", "Saldo Pendiente", "Estado"].map((h) => (
-          <th key={h} className="border-b border-stone-200 pb-2.5 text-left text-xs font-semibold text-stone-500">
-            {h}
-          </th>
-        ))}
-        {/* Columna para las acciones */}
-        <th className="border-b border-stone-200 pb-2.5 pr-3 text-right text-xs font-semibold text-stone-500">
-          Acción
-        </th>
-      </tr>
-    </thead>
-    <tbody>
-      {cargando ? (
-        <tr>
-          <td colSpan={8} className="py-8 text-center text-stone-500">
-            <div className="flex items-center justify-center gap-2">
-              <Loader2 className="animate-spin text-amber-500" size={18} />
-              Cargando comprobantes...
-            </div>
-          </td>
-        </tr>
-      ) : remitos.length === 0 ? (
-        <tr>
-          <td colSpan={8} className="py-8 text-center text-stone-400">
-            No hay remitos registrados.
-          </td>
-        </tr>
-      ) : (
-        remitos.map((r) => {
-          const id = r.id || r.nro_remito;
-          const estaSeleccionado = seleccionados.includes(id);
-
-          return (
-            <tr
-              key={id}
-              className={`transition-colors ${
-                estaSeleccionado ? "bg-amber-50/50" : "hover:bg-stone-50/60"
-              }`}
-            >
-              <td className="border-b border-stone-100 py-3.5 pl-2">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[660px] border-collapse text-sm">
+          <thead>
+            <tr>
+              {/* Checkbox Maestro */}
+              <th className="border-b border-stone-200 pb-2.5 pl-2 text-left w-10">
                 <input
                   type="checkbox"
-                  checked={estaSeleccionado}
-                  onChange={() => toggleSeleccion(id)}
+                  checked={todosSeleccionados}
+                  onChange={toggleTodos}
                   className="h-4 w-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
                 />
-              </td>
-              <td className="border-b border-stone-100 py-3.5">{formatFecha(r.fecha)}</td>
-              <td className="border-b border-stone-100 py-3.5 font-semibold text-stone-800">
-                {r.socio?.nombre || "—"}
-              </td>
-              <td className="border-b border-stone-100 py-3.5 font-medium">{r.nro_remito}</td>
-              <td className="border-b border-stone-100 py-3.5 text-stone-500">{r.nro_factura || "—"}</td>
-              <td className="border-b border-stone-100 py-3.5 font-bold">{formatMoneda(r.total)}</td>
-              <td className="border-b border-stone-100 py-3.5 font-bold">{formatMoneda(r.saldo_pendiente)}</td>
-              <td className="border-b border-stone-100 py-3.5">
-                <EstadoRemito estado={r.estado_cobro_cliente} />
-              </td>
-          
-              {/* Botón con el ojo para ver detalle */}
-              <td className="border-b border-stone-100 py-3.5 pr-3 text-right">
-                <button
-                  type="button"
-                  onClick={() => navigate(`/remitos/detalle/${r.id}`)}
-                  title="Ver detalle del remito"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 hover:bg-stone-100 hover:text-stone-800 transition-colors cursor-pointer"
-                >
-                  <Eye size={17} />
-                </button>
-              </td>
+              </th>
+              {["Fecha", "Socio", "N° remito", "N° factura", "Total", "Saldo Pendiente", "Estado"].map((h) => (
+                <th key={h} className="border-b border-stone-200 pb-2.5 text-left text-xs font-semibold text-stone-500">
+                  {h}
+                </th>
+              ))}
+              {/* Columna para las acciones */}
+              <th className="border-b border-stone-200 pb-2.5 pr-3 text-right text-xs font-semibold text-stone-500">
+                Acción
+              </th>
             </tr>
-          );
-        })
-      )}
-    </tbody>
-  </table>
-</div>
-  {/* Fin del div overflow-x-auto */}
+          </thead>
+          <tbody>
+            {cargando ? (
+              <tr>
+                <td colSpan={8} className="py-8 text-center text-stone-500">
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader2 className="animate-spin text-amber-500" size={18} />
+                    Cargando comprobantes...
+                  </div>
+                </td>
+              </tr>
+            ) : remitos.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="py-8 text-center text-stone-400">
+                  No hay remitos registrados.
+                </td>
+              </tr>
+            ) : (
+              remitos.map((r) => {
+                const id = r.id || r.nro_remito;
+                const estaSeleccionado = seleccionados.includes(id);
 
-        <BarraPagoRemitos
-          seleccionados={seleccionados}
-          total={totalSeleccionado}
-          formatMoneda={formatMoneda}
-          onDesmarcar={() => setSeleccionados([])}
-          onPagar={() => {
-            console.log("IDs listos para pagar:", seleccionados);
-          }}
-        />
+                return (
+                  <tr
+                    key={id}
+                    className={`transition-colors ${estaSeleccionado ? "bg-amber-50/50" : "hover:bg-stone-50/60"
+                      }`}
+                  >
+                    <td className="border-b border-stone-100 py-3.5 pl-2">
+                      <input
+                        type="checkbox"
+                        checked={estaSeleccionado}
+                        onChange={() => toggleSeleccion(id)}
+                        className="h-4 w-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
+                      />
+                    </td>
+                    <td className="border-b border-stone-100 py-3.5">{formatFecha(r.fecha)}</td>
+                    <td className="border-b border-stone-100 py-3.5 font-semibold text-stone-800">
+                      {r.socio?.nombre || "—"}
+                    </td>
+                    <td className="border-b border-stone-100 py-3.5 font-medium">{r.nro_remito}</td>
+                    <td className="border-b border-stone-100 py-3.5 text-stone-500">{r.nro_factura || "—"}</td>
+                    <td className="border-b border-stone-100 py-3.5 font-bold">{formatMoneda(r.total)}</td>
+                    <td className="border-b border-stone-100 py-3.5 font-bold">{formatMoneda(r.saldo_pendiente)}</td>
+                    <td className="border-b border-stone-100 py-3.5">
+                      <EstadoRemito estado={r.estado_cobro_cliente} />
+                    </td>
+
+                    {/* Botón con el ojo para ver detalle */}
+                    <td className="border-b border-stone-100 py-3.5 pr-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/remitos/detalle/${r.id}`)}
+                        title="Ver detalle del remito"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 hover:bg-stone-100 hover:text-stone-800 transition-colors cursor-pointer"
+                      >
+                        <Eye size={17} />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+      {/* Fin del div overflow-x-auto */}
+
+      <BarraPagoRemitos
+        seleccionados={seleccionados}
+        total={totalSeleccionado}
+        formatMoneda={formatMoneda}
+        onDesmarcar={() => setSeleccionados([])}
+        onPagar={() => {
+          console.log("IDs listos para pagar:", seleccionados);
+        }}
+      />
     </main>
   );
 }
