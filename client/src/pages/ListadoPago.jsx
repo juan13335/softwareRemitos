@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
-import { ChevronDown, ChevronRight, Receipt, User, Loader2 } from "lucide-react";
-import api  from "../api/api.js"; // Ajustá la ruta a tu cliente axios
+import { ChevronDown, ChevronRight, Receipt, User, Loader2, Trash2 } from "lucide-react";
+import api from "../api/api.js"; // Ajustá la ruta a tu cliente axios
 
 function formatoMoneda(valor) {
   const num = Number(valor) || 0;
@@ -62,16 +62,34 @@ export default function ListadoPagos() {
       else next.add(id);
       return next;
     });
-  }
+  };
+
+  const handleEliminarPago = async (id) => {
+    const confirmacion = window.confirm(
+      "¿Estás seguro de que querés anular este pago? Se desvincularán los remitos imputados y volverán a quedar pendientes."
+    );
+    if (!confirmacion) return;
+
+    try {
+      // 1. Petición PATCH al endpoint de anulación
+      await api.patch(`/pagos/anular/${id}`);
+      // 2. Actualizar la tabla de pagos en el frontend
+      // Si filtrás para mostrar solo activos, lo quitás de la lista:
+      setPagosData((prev) => prev.filter((p) => p.id !== id));
+    } catch (error) {
+      console.error("Error al anular el pago:", error);
+      alert("No se pudo anular el comprobante. Intentá nuevamente.");
+    }
+  };
 
   if (loading) {
-  return (
-    <main className="mx-auto flex min-h-[60vh] w-full max-w-5xl flex-col items-center justify-center gap-3 px-5 py-8 text-stone-500">
-      <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
-      <span className="text-sm font-medium">Cargando pagos...</span>
-    </main>
-  );
-}
+    return (
+      <main className="mx-auto flex min-h-[60vh] w-full max-w-5xl flex-col items-center justify-center gap-3 px-5 py-8 text-stone-500">
+        <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
+        <span className="text-sm font-medium">Cargando pagos...</span>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto w-full max-w-5xl px-5 py-8 md:px-9 text-stone-800">
@@ -138,6 +156,7 @@ export default function ListadoPagos() {
                   <th className="px-3 py-3 text-left text-xs font-semibold text-stone-500">Formas de pago</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-stone-500">Remitos</th>
                   <th className="px-3 py-3 text-right text-xs font-semibold text-stone-500">Monto total</th>
+                  <th className="px-3 py-3 text-right text-xs font-semibold text-stone-500">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -149,6 +168,7 @@ export default function ListadoPagos() {
                       pago={pago}
                       abierto={abierto}
                       onToggle={() => toggleExpandido(pago.id)}
+                      onEliminar={() => handleEliminarPago(pago.id)}
                     />
                   );
                 })}
@@ -161,7 +181,7 @@ export default function ListadoPagos() {
   );
 }
 
-function FilaPago({ pago, abierto, onToggle }) {
+function FilaPago({ pago, abierto, onToggle, onEliminar }) {
   return (
     <>
       <tr
@@ -185,17 +205,15 @@ function FilaPago({ pago, abierto, onToggle }) {
               return (
                 <div key={i} className="flex items-baseline gap-1.5 text-xs sm:text-sm">
                   <span
-                    className={`capitalize ${
-                      esSaldoAFavor ? "font-medium text-sky-700" : "text-stone-700"
-                    }`}
+                    className={`capitalize ${esSaldoAFavor ? "font-medium text-sky-700" : "text-stone-700"
+                      }`}
                   >
                     {m.forma}
                   </span>
                   <span className="flex-1 border-b border-dotted border-stone-300 translate-y-[-2px]" />
                   <span
-                    className={`font-semibold ${
-                      esSaldoAFavor ? "text-sky-800" : "text-stone-800"
-                    }`}
+                    className={`font-semibold ${esSaldoAFavor ? "text-sky-800" : "text-stone-800"
+                      }`}
                   >
                     {formatoMoneda(m.monto)}
                   </span>
@@ -209,6 +227,16 @@ function FilaPago({ pago, abierto, onToggle }) {
         </td>
         <td className="whitespace-nowrap px-3 py-3.5 text-right text-base font-bold text-stone-800">
           {formatoMoneda(pago.monto)}
+        </td>
+        <td className="whitespace-nowrap px-3 py-3.5 text-right text-base font-bold text-stone-800">
+          <button
+            type="button"
+            onClick={() => onEliminar(pago.id)}
+            className="inline-flex items-center justify-center rounded-lg p-1.5 text-stone-400 transition hover:bg-rose-50 hover:text-rose-600 focus:outline-none"
+            title="Eliminar pago"
+          >
+            <Trash2 size={18} />
+          </button>
         </td>
       </tr>
 

@@ -15,8 +15,8 @@ const QUICK_ACTIONS = [
 export default function Dashboard() {
   const [remitos, setRemitos] = useState([]);
   const [saldoAFavor, setSaldoAFavor] = useState(0);
-  const [socioId, setSocioId] = useState([]);
-  const [socios, setSocios] = useState([]);
+  const [socioId, setSocioId] = useState("");
+  const [socios, setSocios] = useState("");
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
   const [seleccionados, setSeleccionados] = useState([]);
