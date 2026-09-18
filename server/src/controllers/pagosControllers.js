@@ -12,6 +12,7 @@ export const getPagos = async (req, res) => {
         nro_comprobante,
         notas,
         created_at,
+        estado,
         socio:socios ( id, nombre ),
         metodos:pago_metodos ( id, forma_pago, monto ),
         remitos:pago_remitos (
@@ -20,6 +21,7 @@ export const getPagos = async (req, res) => {
           remito:remitos_socio ( id, nro_remito )
         )
       `)
+      .or("estado.eq.Activo")
       .order("fecha_pago", { ascending: false })
       .order("created_at", { ascending: false });
 
@@ -43,6 +45,7 @@ export const getPagos = async (req, res) => {
         monto_real_caja: Number(p.monto), 
         monto: totalOperacion > 0 ? totalOperacion : Number(p.monto), // Total cancelado en la operación
         nro_comprobante: p.nro_comprobante,
+        estado: p.estado,
         notas: p.notas,
         metodos,
         remitos: (p.remitos || []).map((r) => ({
@@ -141,5 +144,34 @@ export const createPago = async (req, res) => {
     return res.status(500).json({
       error: error.message || "Error interno al procesar el pago.",
     });
+  }
+};
+
+// anular pago
+export const anularPago = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // 1. Borrar imputaciones (dispara el trigger existente en pago_remitos)
+    const { error: errImputaciones } = await supabase
+      .from("pago_remitos")
+      .delete()
+      .eq("pago_id", id);
+
+    if (errImputaciones) throw errImputaciones;
+
+    // 2. Marcar el pago padre como anulado para auditoría
+    const { data, error: errPago } = await supabase
+      .from("pagos_socio")
+      .update({ estado: "Anulado" })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (errPago) throw errPago;
+
+    return res.status(200).json({ ok: true, data });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
   }
 };
