@@ -73,7 +73,6 @@ export default function CargarRemito() {
       try {
         const res = await api.get(`/remitos/detalle/${id}`);
         const r = res.data;
-        console.log("Informacion del GET", r)
 
         // 1. Socio y fecha
         if (r.socio_id) setSocioId(r.socio_id);

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Check, User, Clock, Plus, X, Wallet, Loader2, CheckCircle2 } from "lucide-react";
+import { Check, User, Clock, Plus, X, Wallet, Loader2, CheckCircle2, Receipt } from "lucide-react";
 import api from "../api/api.js";
 
 const FORMAS_PAGO = ["Efectivo", "Transferencia", "Cheque", "Tarjeta"];
@@ -117,6 +117,12 @@ export default function RegistrarPago() {
     () => formasPago.reduce((acc, f) => acc + (parseFloat(f.monto) || 0), 0),
     [formasPago]
   );
+
+  const totalRemitosSeleccionados = remitosAplicados.reduce(
+    (acc, r) => acc + (Number(r.monto) || Number(r.saldoPendiente) || 0),
+    0
+  );
+
 
   // DESCUENTO AUTOMÁTICO EN CASCADA
   // Cada remito toma automáticamente lo que necesita del pozo hasta agotarlo
@@ -461,17 +467,13 @@ export default function RegistrarPago() {
               <select
                 value={remitoParaAgregar}
                 onChange={(e) => setRemitoParaAgregar(e.target.value)}
-                disabled={cargandoRemitos || remitosDisponibles.length === 0 || saldoSinAplicar <= 0}
-                className="rounded-lg border border-stone-200 bg-stone-100 px-3 py-2.5 text-base text-stone-800 focus:bg-white focus:outline-2 focus:outline-amber-500 disabled:opacity-50"
+                className="rounded-lg border border-stone-200 bg-stone-100 px-3 py-2.5 text-base text-stone-800 focus:bg-white focus:outline-2 focus:outline-amber-500"
               >
                 <option value="">
-                  {totalPago === 0
-                    ? "Primero cargá una forma de pago"
-                    : saldoSinAplicar <= 0
-                      ? "Ya consumiste todo el dinero cobrado"
-                      : remitosDisponibles.length === 0
-                        ? "No hay más remitos con deuda"
-                        : "Seleccioná un remito"}
+                  {
+                    remitosDisponibles.length === 0
+                      ? "No hay más remitos con deuda"
+                      : "Seleccioná un remito"}
                 </option>
                 {remitosDisponibles.map((r) => (
                   <option key={r.id} value={r.id}>
@@ -483,7 +485,7 @@ export default function RegistrarPago() {
             <button
               type="button"
               onClick={agregarRemito}
-              disabled={!remitoParaAgregar || saldoSinAplicar <= 0}
+              disabled={!remitoParaAgregar}
               className="flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-40"
             >
               <Plus size={16} />
@@ -531,6 +533,7 @@ export default function RegistrarPago() {
                     </div>
                   </div>
 
+
                   {/* Vista fija del monto imputado (sin input editable) */}
                   <div className="flex items-center gap-4">
                     <div className="text-right">
@@ -539,6 +542,7 @@ export default function RegistrarPago() {
                         {formatoMoneda(r.montoImputado)}
                       </div>
                     </div>
+
 
                     <button
                       type="button"
@@ -557,20 +561,45 @@ export default function RegistrarPago() {
           {/* Saldo disponible en mano */}
           <div
             className={
-              "mt-4 flex items-center justify-between rounded-lg px-4 py-3.5 " +
+              "mt-4 flex flex-col gap-3 rounded-lg px-4 py-3.5 transition-colors " +
               (saldoSinAplicar > 0
                 ? "bg-sky-50 text-sky-800"
                 : "bg-emerald-50 text-emerald-800")
             }
           >
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <Wallet size={16} />
-              {saldoSinAplicar > 0
-                ? "Saldo disponible en mano para seguir imputando"
-                : "Todo el dinero cobrado ha sido imputado"}
+            {/* Saldo */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-normal">
+                <Wallet size={16} className="text-stone-500" />
+                <span>
+                  {saldoSinAplicar > 0
+                    ? "Saldo disponible"
+                    : "Todo el dinero ha sido imputado"}
+                </span>
+              </div>
+              <span className="text-lg font-bold text-stone-900">
+                {formatoMoneda(saldoSinAplicar)}
+              </span>
             </div>
-            <span className="text-xl font-bold">{formatoMoneda(saldoSinAplicar)}</span>
+
+            <div className="h-px w-full bg-stone-200/60" />
+
+            {/* Total de remitos */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-normal text-stone-700">
+                <Receipt size={16} className="text-stone-500" />
+                <span>
+                  {remitosAplicados.length > 0
+                    ? `Total de remitos a cancelar (${remitosAplicados.length})`
+                    : "Sin remitos seleccionados"}
+                </span>
+              </div>
+              <span className="text-lg font-bold text-stone-900">
+                {formatoMoneda(totalRemitosSeleccionados)}
+              </span>
+            </div>
           </div>
+
         </section>
 
         {/* 3. Datos generales */}
