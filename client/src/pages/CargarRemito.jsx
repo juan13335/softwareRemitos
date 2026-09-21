@@ -82,7 +82,8 @@ export default function CargarRemito() {
 
         // 2. Desarmar Número de Remito (ej: "0001-00004521" o "R-0001-00004521")
         if (r.nro_remito) {
-          const partesRemito = r.nro_remito.replace("R-", "").split("-");
+          const partesRemito = r.nro_remito.replace("R-", "").split("-").map((p) => p.trim());
+          console.log("Partes del remito", partesRemito)
           if (partesRemito.length === 2) {
             setPuntoVenta(partesRemito[0]);
             setNumeroRemito(partesRemito[1]);
@@ -96,7 +97,7 @@ export default function CargarRemito() {
           setSinFactura(true);
         } else {
           setSinFactura(false);
-          const partesFac = r.nro_factura.split("-");
+          const partesFac = r.nro_factura.split("-").map((p) => p.trim());
           if (partesFac.length === 3) {
             setLetraFactura(partesFac[0]);
             setPvFactura(partesFac[1]);
