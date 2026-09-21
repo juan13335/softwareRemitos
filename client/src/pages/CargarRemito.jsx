@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Plus, Trash2, Check, User, Loader2 } from "lucide-react";
-import  api from "../api/api.js";
+import api from "../api/api.js";
 
 function nuevoItem() {
   return { id: crypto.randomUUID(), productoId: "", cantidad: 1, precioUnitario: 0 };
@@ -12,6 +12,8 @@ function formatoMoneda(valor) {
 }
 
 export default function CargarRemito() {
+  const { id } = useParams();
+  const esEdicion = Boolean(id);
   const navigate = useNavigate();
 
   // Estados de datos maestros
@@ -63,6 +65,66 @@ export default function CargarRemito() {
     const soloNumeros = numeroFactura.replace(/\D/g, "");
     setNumeroFactura(soloNumeros.padStart(8, "0").slice(-8));
   };
+
+  useEffect(() => {
+    if (!esEdicion) return;
+
+    async function cargarRemitoAEditar() {
+      try {
+        const res = await api.get(`/remitos/detalle/${id}`);
+        const r = res.data;
+        console.log("Informacion del GET", r)
+
+        // 1. Socio y fecha
+        if (r.socio_id) setSocioId(r.socio_id);
+        if (r.fecha) setFecha(r.fecha.slice(0, 10));
+        if (r.notas) setNotas(r.notas);
+
+        // 2. Desarmar Número de Remito (ej: "0001-00004521" o "R-0001-00004521")
+        if (r.nro_remito) {
+          const partesRemito = r.nro_remito.replace("R-", "").split("-");
+          if (partesRemito.length === 2) {
+            setPuntoVenta(partesRemito[0]);
+            setNumeroRemito(partesRemito[1]);
+          } else {
+            setNumeroRemito(r.nro_remito);
+          }
+        }
+
+        // 3. Desarmar Factura (ej: "A-00013-00008821")
+        if (!r.nro_factura) {
+          setSinFactura(true);
+        } else {
+          setSinFactura(false);
+          const partesFac = r.nro_factura.split("-");
+          if (partesFac.length === 3) {
+            setLetraFactura(partesFac[0]);
+            setPvFactura(partesFac[1]);
+            setNumeroFactura(partesFac[2]);
+          } else {
+            setNumeroFactura(r.nro_factura);
+          }
+        }
+
+        // 4. Cargar los ítems existentes
+        if (r.items && r.items.length > 0) {
+          setItems(
+            r.items.map((it) => ({
+              id: it.id, // o clave temporal
+              productoId: it.producto_id,
+              cantidad: it.cantidad,
+              precioUnitario: it.precio_unitario,
+            }))
+          );
+        }
+      } catch (err) {
+        console.error("Error al cargar remito:", err);
+        setErrorForm("No se pudo cargar el remito para editar.");
+      }
+    }
+
+    cargarRemitoAEditar();
+  }, [id, esEdicion]);
 
   // Carga inicial de datos
   useEffect(() => {
@@ -194,7 +256,12 @@ export default function CargarRemito() {
 
     setGuardando(true);
     try {
-      await api.post("/remitos", payload);
+      if (esEdicion) {
+        await api.put(`/remitos/editar/${id}`, payload)
+      }
+      else {
+        await api.post("/remitos", payload);
+      }
       navigate("/");
     } catch (err) {
       console.error("Error al guardar remito:", err);
@@ -235,9 +302,9 @@ export default function CargarRemito() {
             <span className="text-sm text-stone-500">Socio</span>
             <select
               value={socioId}
-              disabled={cargandoSocios}
+              disabled={cargandoSocios || esEdicion}
               onChange={(e) => setSocioId(e.target.value)}
-              className="rounded-lg border border-stone-200 bg-stone-100 px-3 py-2.5 text-base text-stone-800 focus:bg-white focus:outline-2 focus:outline-amber-500 disabled:opacity-50"
+              className="rounded-lg border border-stone-200 bg-stone-100 px-3 py-2.5 text-base text-stone-800 focus:bg-white focus:outline-2 focus:outline-amber-500 disabled:cursor-not-allowed disabled:bg-stone-200/70 disabled:text-stone-400 disabled:opacity-75 disabled:focus:outline-none"
             >
               {cargandoSocios ? (
                 <option value="">Cargando socios...</option>
@@ -291,11 +358,10 @@ export default function CargarRemito() {
           <div className="flex min-w-[260px] flex-1 flex-col gap-1.5">
             <span className="text-sm text-stone-500">N° de factura</span>
             <div
-              className={`flex items-center rounded-lg border border-stone-200 bg-stone-100 px-3 py-2.5 transition-all ${
-                sinFactura
-                  ? "opacity-40 cursor-not-allowed"
-                  : "focus-within:border-amber-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-amber-500"
-              }`}
+              className={`flex items-center rounded-lg border border-stone-200 bg-stone-100 px-3 py-2.5 transition-all ${sinFactura
+                ? "opacity-40 cursor-not-allowed"
+                : "focus-within:border-amber-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-amber-500"
+                }`}
             >
               <input
                 type="text"
@@ -472,15 +538,17 @@ export default function CargarRemito() {
           type="button"
           disabled={guardando}
           onClick={handleSubmit}
-          className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-6 py-4 text-base font-semibold text-white hover:bg-emerald-800 disabled:opacity-50 transition-colors"
+          className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-6 py-4 text-base font-semibold text-white transition-colors hover:bg-emerald-800 disabled:opacity-50"
         >
           {guardando ? (
             <>
-              <Loader2 className="animate-spin" size={18} /> Guardando...
+              <Loader2 className="animate-spin" size={18} />
+              <span>{esEdicion ? "Actualizando..." : "Guardando..."}</span>
             </>
           ) : (
             <>
-              <Check size={18} /> Guardar remito
+              <Check size={18} />
+              <span>{esEdicion ? "Guardar cambios" : "Guardar remito"}</span>
             </>
           )}
         </button>
