@@ -246,7 +246,7 @@ export default function ListadoRemitos() {
                     remitos={remitos}
                     cargando={cargando}
                     socios={socios}
-                    onVer={(r) => navigate(`/remitos/${r.id}`)}
+                    onVer={(r) => navigate(`/remitos/detalle/${r.id}`)}
                     onEditar={(r) => navigate(`/remitos/editar/${r.id}`)}
                     onEliminar={eliminarRemito} />
 
