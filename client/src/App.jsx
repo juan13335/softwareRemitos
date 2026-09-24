@@ -7,6 +7,7 @@ import CargarProducto from "./pages/CargarProducto.jsx";
 import CargarPago from "./pages/CargarPago.jsx";  
 import ListadoPagos from "./pages/ListadoPago.jsx";
 import ListadoProductos from "./pages/ListadoProductos.jsx";
+import ListadoRemitos from "./pages/ListadoRemitos.jsx";
 
 export default function App() {
   return (
@@ -18,10 +19,12 @@ export default function App() {
           <Route path="/remitos/nuevo" element={<CargarRemito />} />
           <Route path="/remitos/editar/:id" element={<CargarRemito />} />
           <Route path="/remitos/detalle/:id" element={<DetalleRemito />} /> 
+          <Route path="/remitos" element={<ListadoRemitos />} />
           <Route path="/productos/nuevo" element={<CargarProducto />} />
           <Route path="/pagos/nuevo" element={<CargarPago />} />
           <Route path="/pagos" element={<ListadoPagos />} />
           <Route path="/productos" element={<ListadoProductos />} />
+          
         </Routes>
       </div>
     </BrowserRouter>

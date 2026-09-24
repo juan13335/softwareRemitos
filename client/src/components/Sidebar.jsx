@@ -4,7 +4,7 @@ import { Home, Users, Package, CreditCard, FileText } from "lucide-react";
 const NAV_ITEMS = [
   { icon: Home, label: "Inicio", path: "/" },
   { icon: Users, label: "Socios", path: "/socios" },
-  { icon: Package, label: "Remitos", path: "/remitos/nuevo" },
+  { icon: Package, label: "Remitos", path: "/remitos" },
   { icon: CreditCard, label: "Pagos", path: "/pagos" },
   { icon: FileText, label: "Productos", path: "/productos" },
 ];

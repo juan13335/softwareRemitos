@@ -16,7 +16,7 @@ export default function CargarRemito() {
   const esEdicion = Boolean(id);
   const navigate = useNavigate();
 
-  // Estados de datos maestros
+  // Estados de datos 
   const [socios, setSocios] = useState([]);
   const [socioId, setSocioId] = useState("");
   const [cargandoSocios, setCargandoSocios] = useState(true);

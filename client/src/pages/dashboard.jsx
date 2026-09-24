@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Users, Package, CreditCard, Plus, Check, Clock, Calendar, Loader2, Eye, Wallet } from "lucide-react";
-import EstadoRemito from "../components/EstadoRemito.jsx";
+import TablaRemitos from "../components/TablaRemitos.jsx";
 import Paginador from "../components/Paginador.jsx";
 import BarraPagoRemitos from "../components/BarraPagoRemitos.jsx";
 import api from "../api/api.js";
@@ -17,8 +17,8 @@ export default function Dashboard() {
   const [remitos, setRemitos] = useState([]);
   const [pagina, setPagina] = useState(1);
   const [totales, setTotales] = useState({
-    "total_pendiente" : 0,
-    "total_cobrado" : 0,
+    "total_pendiente": 0,
+    "total_cobrado": 0,
   })
   const [paginacion, setPaginacion] = useState(null);
   const [saldoAFavor, setSaldoAFavor] = useState(0);
@@ -32,14 +32,14 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchRemitos = async () => {
       try {
-        const res = await api.get("/remitos",{
+        const res = await api.get("/remitos", {
           params: { page: pagina, limit: 10 },
         });
         setRemitos(res.data.datos);
         setPaginacion(res.data.paginacion);
         if (res.data.totales) {
-        setTotales(res.data.totales);
-      }
+          setTotales(res.data.totales);
+        }
       } catch (err) {
         console.error("Error al cargar remitos:", err);
         setError("No se pudieron cargar los comprobantes.");
@@ -58,8 +58,8 @@ export default function Dashboard() {
         const res = await api.get("/socios");
         setSocios(res.data);
         if (res.data && res.data.length > 0) {
-        setSocioId(String(res.data[0].id));
-      }
+          setSocioId(String(res.data[0].id));
+        }
       } catch (err) {
         console.error("Error al cargar socios:", err);
       }
@@ -153,8 +153,8 @@ export default function Dashboard() {
   ];
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-5 py-8 md:px-9">
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+    <main className="mx-auto w-full max-w-6xl px-5 py-5 md:px-9">
+      <div className="mb-6 py-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-stone-900">Resumen general</h1>
           <div className="mt-1 text-sm text-stone-500">Estado de cuentas con todos los socios</div>
@@ -200,111 +200,31 @@ export default function Dashboard() {
       </div>
 
       {/* Tabla de remitos con selección múltiple */}
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[660px] border-collapse text-sm">
-          <thead>
-            <tr>
-              {/* Checkbox Maestro */}
-              <th className="border-b border-stone-200 pb-2.5 pl-2 text-left w-10">
-                <input
-                  type="checkbox"
-                  checked={todosSeleccionados}
-                  onChange={toggleTodos}
-                  className="h-4 w-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
-                />
-              </th>
-              {["Fecha", "Socio", "N° remito", "N° factura", "Total", "Saldo Pendiente", "Estado"].map((h) => (
-                <th key={h} className="border-b border-stone-200 pb-2.5 text-left text-xs font-semibold text-stone-500">
-                  {h}
-                </th>
-              ))}
-              {/* Columna para las acciones */}
-              <th className="border-b border-stone-200 pb-2.5 pr-3 text-right text-xs font-semibold text-stone-500">
-                Acción
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {cargando ? (
-              <tr>
-                <td colSpan={8} className="py-8 text-center text-stone-500">
-                  <div className="flex items-center justify-center gap-2">
-                    <Loader2 className="animate-spin text-amber-500" size={18} />
-                    Cargando comprobantes...
-                  </div>
-                </td>
-              </tr>
-            ) : remitos.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="py-8 text-center text-stone-400">
-                  No hay remitos registrados.
-                </td>
-              </tr>
-            ) : (
-              remitos.map((r) => {
-                const id = r.id || r.nro_remito;
-                const estaSeleccionado = seleccionados.includes(id);
-
-                return (
-                  <tr
-                    key={id}
-                    className={`transition-colors ${estaSeleccionado ? "bg-amber-50/50" : "hover:bg-stone-50/60"
-                      }`}
-                  >
-                    <td className="border-b border-stone-100 py-3.5 pl-2">
-                      <input
-                        type="checkbox"
-                        checked={estaSeleccionado}
-                        onChange={() => toggleSeleccion(id)}
-                        className="h-4 w-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
-                      />
-                    </td>
-                    <td className="border-b border-stone-100 py-3.5">{formatFecha(r.fecha)}</td>
-                    <td className="border-b border-stone-100 py-3.5 font-semibold text-stone-800">
-                      {r.socio?.nombre || "—"}
-                    </td>
-                    <td className="border-b border-stone-100 py-3.5 font-medium">{r.nro_remito}</td>
-                    <td className="border-b border-stone-100 py-3.5 text-stone-500">{r.nro_factura || "—"}</td>
-                    <td className="border-b border-stone-100 py-3.5 font-bold">{formatMoneda(r.total)}</td>
-                    <td className="border-b border-stone-100 py-3.5 font-bold">{formatMoneda(r.saldo_pendiente)}</td>
-                    <td className="border-b border-stone-100 py-3.5">
-                      <EstadoRemito estado={r.estado_cobro_cliente} />
-                    </td>
-
-                    {/* Botón con el ojo para ver detalle */}
-                    <td className="border-b border-stone-100 py-3.5 pr-3 text-right">
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/remitos/detalle/${r.id}`)}
-                        title="Ver detalle del remito"
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 hover:bg-stone-100 hover:text-stone-800 transition-colors cursor-pointer"
-                      >
-                        <Eye size={17} />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+      <div className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
+        <TablaRemitos
+          remitos={remitos}
+          cargando={cargando}
+          socios={socios}
+          onVer={(r) => navigate(`/remitos/detalle/${r.id}`)}
+          onEditar={(r) => navigate(`/remitos/editar/${r.id}`)}
+         />
         <Paginador
-        paginacion={paginacion}
-        alCambiarPagina={setPagina}
-        cargando={cargando}
-        nombreEntidad="remitos"
-      />
+          paginacion={paginacion}
+          alCambiarPagina={setPagina}
+          cargando={cargando}
+          nombreEntidad="remitos"
+        />
+        {/* Fin del div overflow-x-auto */}
+        <BarraPagoRemitos
+          seleccionados={seleccionados}
+          total={totalSeleccionado}
+          formatMoneda={formatMoneda}
+          onDesmarcar={() => setSeleccionados([])}
+          onPagar={() => {
+            console.log("IDs listos para pagar:", seleccionados);
+          }}
+        />
       </div>
-      {/* Fin del div overflow-x-auto */}
-      <BarraPagoRemitos
-        seleccionados={seleccionados}
-        total={totalSeleccionado}
-        formatMoneda={formatMoneda}
-        onDesmarcar={() => setSeleccionados([])}
-        onPagar={() => {
-          console.log("IDs listos para pagar:", seleccionados);
-        }}
-      />
     </main>
   );
 }
