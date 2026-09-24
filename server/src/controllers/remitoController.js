@@ -1,10 +1,12 @@
 import { supabase } from '../config/supabase.js';
+import { getPaginacion, respuestaPaginada } from '../utils/paginacion.js'
 
 
 // GET /api/remitos - Lista todos los remitos con su socio y productos
 export const getRemitos = async (req, res) => {
   try {
-    const { data, error } = await supabase
+    const { page, limit, from, to } = getPaginacion(req.query, 10);
+    const { data, count, error } = await supabase
       .from('v_remitos_con_totales')
       .select(`
         id,
@@ -31,14 +33,17 @@ export const getRemitos = async (req, res) => {
             nombre
           )
         )
-      `)
-      .order('fecha', { ascending: false });
+      `, { count: "exact"})
+      .order('fecha', { ascending: false })
+      .range(from, to);
 
     if (error) {
       return res.status(500).json({ error: error.message });
     }
 
-    return res.status(200).json(data);
+    return res
+    .status(200)
+    .json(respuestaPaginada(data, count, page, limit));
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -203,63 +208,67 @@ export const createRemito = async (req, res) => {
 // PUT /api/remitos/:nro_remito
 export const updateRemito = async (req, res) => {
   try {
-    const { nro_remito } = req.params;
-    const { socio_id, nro_factura, fecha, items } = req.body;
+    const { id } = req.params;
+    const { socio_id, nro_remito, nro_factura, fecha, items } = req.body;
 
-    // 1. Buscar el remito para obtener su ID
+    if (!id) {
+      return res.status(400).json({ error: "Falta el ID del remito en la URL." });
+    }
+
+    // 1. Buscar remito directamente por UUID y chequear estado
     const { data: remitoExistente, error: busquedaError } = await supabase
-      .from('remitos_socio')
-      .select('id')
-      .eq('nro_remito', nro_remito.trim())
+      .from("remitos_socio")
+      .select("id, socio_id, estado_cobro_cliente")
+      .eq("id", id)
       .maybeSingle();
 
-    if (busquedaError) {
-      return res.status(500).json({ error: busquedaError.message });
-    }
+    if (busquedaError) return res.status(500).json({ error: busquedaError.message });
 
     if (!remitoExistente) {
-      return res.status(404).json({ error: `No se encontró el remito con número ${nro_remito}` });
+      return res.status(404).json({ error: `No se encontró el remito con ID: ${id}` });
     }
 
-    const remitoId = remitoExistente.id;
+    // REGLA: Solo se puede editar si sigue pendiente
+    if (remitoExistente.estado_cobro_cliente !== "pendiente") {
+      return res.status(400).json({
+        error: "Solo podés editar remitos en estado 'pendiente'. Si ya tiene cobros imputados, primero anular el pago.",
+      });
+    }
 
-    // 2. Actualizar cabecera si vinieron campos
+    // 2. Actualizar cabecera si vinieron datos
     const datosCabecera = {};
     if (socio_id !== undefined) datosCabecera.socio_id = socio_id;
+    if (nro_remito !== undefined) datosCabecera.nro_remito = nro_remito ? nro_remito.trim() : null;
     if (nro_factura !== undefined) datosCabecera.nro_factura = nro_factura ? nro_factura.trim() : null;
     if (fecha !== undefined) datosCabecera.fecha = fecha;
 
     if (Object.keys(datosCabecera).length > 0) {
       const { error: updateError } = await supabase
-        .from('remitos_socio')
+        .from("remitos_socio")
         .update(datosCabecera)
-        .eq('id', remitoId);
+        .eq("id", id);
 
-      if (updateError) {
-        return res.status(500).json({ error: updateError.message });
-      }
+      if (updateError) return res.status(500).json({ error: updateError.message });
     }
 
-    // 3. Manejo de ítems (si se enviaron en la petición)
+    // 3. Manejo de ítems
     let itemsActualizados = null;
     if (items && Array.isArray(items)) {
-      // Eliminar ítems previos de este remito
+      // Eliminar los ítems anteriores
       const { error: deleteError } = await supabase
-        .from('remito_items_socio')
+        .from("remito_items_socio")
         .delete()
-        .eq('remito_id', remitoId);
+        .eq("remito_id", id);
 
-      if (deleteError) {
-        return res.status(500).json({ error: deleteError.message });
-      }
+      if (deleteError) return res.status(500).json({ error: deleteError.message });
 
+      // Insertar los nuevos
       if (items.length > 0) {
-        // Formatear respetando la lógica automática de precios/subtotales
         const itemsFormateados = items.map((item) => {
           const fila = {
-            remito_id: remitoId,
+            remito_id: id,
             producto_id: item.producto_id,
-            cantidad: Number(item.cantidad) || 0
+            cantidad: Number(item.cantidad) || 0,
           };
           if (item.precio_unitario !== undefined && item.precio_unitario !== null) {
             fila.precio_unitario = Number(item.precio_unitario);
@@ -268,7 +277,7 @@ export const updateRemito = async (req, res) => {
         });
 
         const { data: inserted, error: insertError } = await supabase
-          .from('remito_items_socio')
+          .from("remito_items_socio")
           .insert(itemsFormateados)
           .select(`
             id,
@@ -276,53 +285,42 @@ export const updateRemito = async (req, res) => {
             cantidad,
             precio_unitario,
             subtotal,
-            producto:productos (
-              nombre
-            )
+            producto:productos ( nombre )
           `);
 
-        if (insertError) {
-          return res.status(500).json({ error: insertError.message });
-        }
-
+        if (insertError) return res.status(500).json({ error: insertError.message });
         itemsActualizados = inserted;
       }
     } else {
-      // Si no se tocaron los ítems, traemos los existentes para no devolverlos nulos
+      // Traer ítems existentes si no se modificaron
       const { data: itemsExistentes } = await supabase
-        .from('remito_items_socio')
+        .from("remito_items_socio")
         .select(`
           id,
           producto_id,
           cantidad,
           precio_unitario,
           subtotal,
-          producto:productos (
-            nombre
-          )
+          producto:productos ( nombre )
         `)
-        .eq('remito_id', remitoId);
+        .eq("remito_id", id);
 
       itemsActualizados = itemsExistentes;
     }
 
-    // 4. Consultar la vista para traer la cabecera con el total actualizado
+    // 4. Retornar remito completo con totales calculados
     const { data: remitoConTotal, error: vistaError } = await supabase
-      .from('v_remitos_con_totales')
-      .select('*')
-      .eq('id', remitoId)
+      .from("v_remitos_con_totales")
+      .select("*")
+      .eq("id", id)
       .single();
 
-    if (vistaError) {
-      return res.status(500).json({ error: vistaError.message });
-    }
+    if (vistaError) return res.status(500).json({ error: vistaError.message });
 
-    // 5. Retornar el remito completo
     return res.status(200).json({
       ...remitoConTotal,
-      items: itemsActualizados
+      items: itemsActualizados,
     });
-
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }

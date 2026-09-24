@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Users, Package, CreditCard, Plus, Check, Clock, Calendar, Loader2, Eye, Wallet } from "lucide-react";
 import EstadoRemito from "../components/EstadoRemito.jsx";
+import Paginador from "../components/Paginador.jsx";
 import BarraPagoRemitos from "../components/BarraPagoRemitos.jsx";
 import api from "../api/api.js";
 
@@ -14,6 +15,8 @@ const QUICK_ACTIONS = [
 
 export default function Dashboard() {
   const [remitos, setRemitos] = useState([]);
+  const [pagina, setPagina] = useState(1);
+  const [paginacion, setPaginacion] = useState(null);
   const [saldoAFavor, setSaldoAFavor] = useState(0);
   const [socioId, setSocioId] = useState("");
   const [socios, setSocios] = useState("");
@@ -25,8 +28,11 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchRemitos = async () => {
       try {
-        const res = await api.get("/remitos");
-        setRemitos(res.data);
+        const res = await api.get("/remitos",{
+          params: { page: pagina, limit: 10 },
+        });
+        setRemitos(res.data.datos);
+        setPaginacion(res.data.paginacion);
       } catch (err) {
         console.error("Error al cargar remitos:", err);
         setError("No se pudieron cargar los comprobantes.");
@@ -36,7 +42,7 @@ export default function Dashboard() {
     };
 
     fetchRemitos();
-  }, []);
+  }, [pagina]);
 
   useEffect(() => {
     const fetchSocios = async () => {
@@ -280,9 +286,14 @@ export default function Dashboard() {
             )}
           </tbody>
         </table>
+        <Paginador
+        paginacion={paginacion}
+        alCambiarPagina={setPagina}
+        cargando={cargando}
+        nombreEntidad="remitos"
+      />
       </div>
       {/* Fin del div overflow-x-auto */}
-
       <BarraPagoRemitos
         seleccionados={seleccionados}
         total={totalSeleccionado}
