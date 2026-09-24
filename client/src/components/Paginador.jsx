@@ -44,7 +44,7 @@ export default function Paginador({
           type="button"
           disabled={!tieneAnterior || cargando}
           onClick={() => alCambiarPagina(paginaActual - 1)}
-          className="inline-flex items-center gap-1 rounded-lg border border-stone-200 bg-white px-3 py-1.5 font-medium text-stone-700 shadow-sm transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400 disabled:shadow-none"
+          className="inline-flex items-center gap-1 rounded-lg border border-stone-200 bg-white px-3 py-1.5 font-medium text-stone-700 shadow-sm transition hover:bg-stone-50 cursor-pointer disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400 disabled:shadow-none"
         >
           <ChevronLeft size={16} />
           <span className="hidden sm:inline">Anterior</span>
@@ -55,7 +55,7 @@ export default function Paginador({
           type="button"
           disabled={!tieneSiguiente || cargando}
           onClick={() => alCambiarPagina(paginaActual + 1)}
-          className="inline-flex items-center gap-1 rounded-lg border border-stone-200 bg-white px-3 py-1.5 font-medium text-stone-700 shadow-sm transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400 disabled:shadow-none"
+          className="inline-flex items-center gap-1 rounded-lg border border-stone-200 bg-white px-3 py-1.5 font-medium text-stone-700 shadow-sm transition hover:bg-stone-50 cursor-pointer disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400 disabled:shadow-none"
         >
           <span className="hidden sm:inline">Siguiente</span>
           <ChevronRight size={16} />
