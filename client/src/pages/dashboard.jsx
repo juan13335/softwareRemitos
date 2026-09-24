@@ -51,9 +51,6 @@ export default function Dashboard() {
     fetchRemitos();
   }, [pagina]);
 
-  useEffect(() => {
-  console.log("Estado totales actualizado en el componente:", totales);
-}, [totales]);
 
   useEffect(() => {
     const fetchSocios = async () => {
