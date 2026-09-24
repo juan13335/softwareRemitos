@@ -16,6 +16,10 @@ const QUICK_ACTIONS = [
 export default function Dashboard() {
   const [remitos, setRemitos] = useState([]);
   const [pagina, setPagina] = useState(1);
+  const [totales, setTotales] = useState({
+    "total_pendiente" : 0,
+    "total_cobrado" : 0,
+  })
   const [paginacion, setPaginacion] = useState(null);
   const [saldoAFavor, setSaldoAFavor] = useState(0);
   const [socioId, setSocioId] = useState("");
@@ -33,6 +37,9 @@ export default function Dashboard() {
         });
         setRemitos(res.data.datos);
         setPaginacion(res.data.paginacion);
+        if (res.data.totales) {
+        setTotales(res.data.totales);
+      }
       } catch (err) {
         console.error("Error al cargar remitos:", err);
         setError("No se pudieron cargar los comprobantes.");
@@ -43,6 +50,10 @@ export default function Dashboard() {
 
     fetchRemitos();
   }, [pagina]);
+
+  useEffect(() => {
+  console.log("Estado totales actualizado en el componente:", totales);
+}, [totales]);
 
   useEffect(() => {
     const fetchSocios = async () => {
@@ -115,12 +126,6 @@ export default function Dashboard() {
     return estado === "cobrado";
   };
 
-  // 2. Montos acumulados
-  const totalPendiente = remitos
-    .reduce((acc, r) => acc + (Number(r.saldo_pendiente) || 0), 0);
-
-  const totalTransferido = remitos
-    .reduce((acc, r) => acc + (Number(r.total_imputado) || 0), 0);
 
   // 3. Cantidades
   const cantPendientes = remitos.filter((r) => !esCobrado(r)).length;
@@ -130,14 +135,14 @@ export default function Dashboard() {
   const kpis = [
     {
       label: "Total pendiente a pagar",
-      value: formatMoneda(totalPendiente),
+      value: formatMoneda(totales.total_pendiente),
       delta: `${cantPendientes} ${cantPendientes === 1 ? "remito pendiente" : "remitos pendientes"}`,
       icon: Clock,
       tint: "bg-amber-50 text-amber-700",
     },
     {
       label: "Total transferido",
-      value: formatMoneda(totalTransferido),
+      value: formatMoneda(totales.total_cobrado),
       delta: `${cantCobrados} ${cantCobrados === 1 ? "remito cobrado" : "remitos cobrados"}`,
       icon: Check,
       tint: "bg-emerald-50 text-emerald-700",

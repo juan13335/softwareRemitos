@@ -36,6 +36,13 @@ export const getRemitos = async (req, res) => {
       `, { count: "exact"})
       .order('fecha', { ascending: false })
       .range(from, to);
+    
+    const { data: totales, error: errTotales } = await supabase
+      .from("v_metricas_dashboard")
+      .select("*")
+      .maybeSingle();
+
+    if (errTotales) throw errTotales;
 
     if (error) {
       return res.status(500).json({ error: error.message });
@@ -43,7 +50,7 @@ export const getRemitos = async (req, res) => {
 
     return res
     .status(200)
-    .json(respuestaPaginada(data, count, page, limit));
+    .json({...respuestaPaginada(data, count, page, limit), totales});
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
