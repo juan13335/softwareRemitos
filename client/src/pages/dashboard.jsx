@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Users, Package, CreditCard, Plus, Check, Clock, Calendar, Loader2, Eye, Wallet } from "lucide-react";
+import Cargando from "../components/IconoCargando.jsx";
 import TablaRemitos from "../components/TablaRemitos.jsx";
 import Paginador from "../components/Paginador.jsx";
 import BarraPagoRemitos from "../components/BarraPagoRemitos.jsx";
@@ -151,6 +152,7 @@ export default function Dashboard() {
       tint: "bg-emerald-50 text-emerald-700",
     },
   ];
+ 
 
   return (
     <main className="mx-auto w-full max-w-6xl px-5 py-5 md:px-9">
@@ -203,15 +205,14 @@ export default function Dashboard() {
       <div className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
         <TablaRemitos
           remitos={remitos}
-          cargando={cargando}
           socios={socios}
+          cargando={cargando}
           onVer={(r) => navigate(`/remitos/detalle/${r.id}`)}
           onEditar={(r) => navigate(`/remitos/editar/${r.id}`)}
          />
         <Paginador
           paginacion={paginacion}
           alCambiarPagina={setPagina}
-          cargando={cargando}
           nombreEntidad="remitos"
         />
         {/* Fin del div overflow-x-auto */}

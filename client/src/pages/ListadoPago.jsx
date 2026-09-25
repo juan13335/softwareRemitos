@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { ChevronDown, ChevronRight, Receipt, User, Loader2, Trash2 } from "lucide-react";
 import api from "../api/api.js"; // Ajustá la ruta a tu cliente axios
+import Cargando from "../components/IconoCargando.jsx";
 
 function formatoMoneda(valor) {
   const num = Number(valor) || 0;
@@ -83,14 +84,8 @@ export default function ListadoPagos() {
   };
 
   if (loading) {
-    return (
-      <main className="mx-auto flex min-h-[60vh] w-full max-w-5xl flex-col items-center justify-center gap-3 px-5 py-8 text-stone-500">
-        <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
-        <span className="text-sm font-medium">Cargando pagos...</span>
-      </main>
-    );
+    return <Cargando loading={loading} nombreEntidad="pagos"/>
   }
-
   return (
     <main className="mx-auto w-full max-w-5xl px-5 py-8 md:px-9 text-stone-800">
       <div className="mb-2 text-sm text-stone-500">

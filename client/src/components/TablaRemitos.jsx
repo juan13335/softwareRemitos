@@ -1,6 +1,7 @@
 // src/components/TablaRemitos.jsx
 import { Eye, Pencil, Trash2 } from "lucide-react";
 import EstadoRemito from "./EstadoRemito.jsx";
+import Cargando from "./IconoCargando.jsx";
 
 function formatoMoneda(valor) {
   const num = Number(valor) || 0;
@@ -30,11 +31,7 @@ export default function TablaRemitos({
   }
 
   if (cargando) {
-    return (
-      <div className="px-4 py-14 text-center text-sm text-stone-500">
-        Cargando remitos...
-      </div>
-    );
+     return <Cargando loading={cargando} nombreEntidad="datos"/>
   }
 
   if (remitos.length === 0) {
@@ -44,6 +41,7 @@ export default function TablaRemitos({
       </div>
     );
   }
+  
 
   return (
     <div className="overflow-x-auto">
