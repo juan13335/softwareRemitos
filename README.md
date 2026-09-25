@@ -95,26 +95,3 @@ VITE_API_URL=http://localhost:3000
 
 Este repositorio se encuentra en desarrollo activo y se utiliza como sistema de control interno para gestión de remitos y pagos.
 
-## Licencia
-
-Este proyecto no especifica licencia en el repositorio actual.
-
-## Autor
-
-- juan13335
-
-## Enlace de la app
-
-- https://software-remitos.vercel.app
-
-## Contribuciones
-
-Si querés colaborar con el proyecto:
-1. Hacé un fork del repositorio.
-2. Creá una rama para tu cambio.
-3. Realizá tus modificaciones.
-4. Abrí un pull request con una descripción clara del cambio.
-
-## Nota
-
-El proyecto utiliza Supabase como backend de datos. Asegurate de tener correctamente configurado tu proyecto y las credenciales en el archivo `.env` antes de correr la aplicación.
