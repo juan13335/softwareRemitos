@@ -1,42 +1,49 @@
 import { supabase } from '../config/supabase.js';
 import { getPaginacion, respuestaPaginada } from '../utils/paginacion.js'
+import { aplicarFiltrosRemitos } from '../utils/filtrado.js';
 
 
 // GET /api/remitos - Lista todos los remitos con su socio y productos
 export const getRemitos = async (req, res) => {
   try {
     const { page, limit, from, to } = getPaginacion(req.query, 10);
-    const { data, count, error } = await supabase
+    const queryBase = supabase
       .from('v_remitos_con_totales')
       .select(`
-        id,
-        nro_remito,
-        nro_factura,
-        fecha,
-        created_at,
-        estado_cobro_cliente,
-        total,
-        total_imputado,
-        saldo_pendiente,
-        socio:socios (
-          id,
-          nombre,
-          telefono
-        ),
-        items:remito_items_socio (
-          id,
-          producto_id,
-          cantidad,
-          precio_unitario,
-          subtotal,
-          producto:productos (
-            nombre
-          )
-        )
-      `, { count: "exact"})
+    id,
+    nro_remito,
+    nro_factura,
+    fecha,
+    created_at,
+    estado_cobro_cliente,
+    total,
+    total_imputado,
+    saldo_pendiente,
+    socio:socios (
+      id,
+      nombre,
+      telefono
+    ),
+    items:remito_items_socio (
+      id,
+      producto_id,
+      cantidad,
+      precio_unitario,
+      subtotal,
+      producto:productos (
+        nombre
+      )
+    )
+  `, { count: "exact" });
+
+    // 2. Le inyectamos los filtros SQL (WHERE)
+    const queryFiltrada = aplicarFiltrosRemitos(queryBase, req.query);
+
+    // 3. Ordenamos, paginamos y RECIÉN ACÁ disparamos a la base de datos con await
+    const { data, count, error } = await queryFiltrada
       .order('fecha', { ascending: false })
       .range(from, to);
-    
+
     const { data: totales, error: errTotales } = await supabase
       .from("v_metricas_dashboard")
       .select("*")
@@ -49,8 +56,8 @@ export const getRemitos = async (req, res) => {
     }
 
     return res
-    .status(200)
-    .json({...respuestaPaginada(data, count, page, limit), totales});
+      .status(200)
+      .json({ ...respuestaPaginada(data, count, page, limit), totales });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -165,10 +172,10 @@ export const createRemito = async (req, res) => {
 
     // 2. Preparar los ítems con el id del remito generado
     const itemsFormateados = items.map((item) => ({
-        remito_id: remito.id,
-        producto_id: item.producto_id,
-        cantidad: Number(item.cantidad) || 0
-        }));
+      remito_id: remito.id,
+      producto_id: item.producto_id,
+      cantidad: Number(item.cantidad) || 0
+    }));
 
     // 3. Insertar los ítems
     const { error: itemsError } = await supabase
@@ -192,7 +199,7 @@ export const createRemito = async (req, res) => {
       });
     }
 
-   const { data: remitoConTotal, error: vistaError } = await supabase
+    const { data: remitoConTotal, error: vistaError } = await supabase
       .from('v_remitos_con_totales') // El nombre exacto que le diste a tu vista
       .select('*')
       .eq('id', remito.id)
@@ -204,9 +211,10 @@ export const createRemito = async (req, res) => {
 
     // 5. Devolver la respuesta con el total ya calculado
     return res.status(201).json({
-        ...remitoConTotal,
-        item: itemsFormateados})
-    
+      ...remitoConTotal,
+      item: itemsFormateados
+    })
+
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }

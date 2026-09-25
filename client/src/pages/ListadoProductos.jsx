@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Pencil, Trash2, Package, User, Plus, Search, Loader2 } from "lucide-react";
-import  api  from "../api/api.js";
+import api from "../api/api.js";
+import Cargando from "../components/IconoCargando.jsx";
 
 function formatoMoneda(valor) {
   const num = Number(valor) || 0;
@@ -91,6 +92,9 @@ export default function ListadoProductos() {
       alert("No se pudo cambiar el estado del producto.");
     }
   }
+  if (loading) {
+    return <Cargando loading={loading} nombreEntidad="pagos" />
+  }
 
   return (
     <main className="mx-auto w-full max-w-5xl px-5 py-8 md:px-9 text-stone-800">
@@ -166,84 +170,73 @@ export default function ListadoProductos() {
 
       {/* Tabla con estados de Carga, Vacío y Resultados */}
       <div className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center gap-2 py-16 text-stone-500">
-            <Loader2 size={24} className="animate-spin text-stone-400" />
-            <span className="text-sm">Cargando catálogo...</span>
-          </div>
-        ) : productosFiltrados.length === 0 ? (
-          <div className="px-4 py-14 text-center text-sm text-stone-500">
-            No se encontraron productos cargados.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-stone-200 bg-stone-50">
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-stone-500">Nombre</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-stone-500">Código</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-stone-500">Socio</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-stone-500">Precio ref.</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-stone-500">Estado</th>
-                  <th className="w-24 px-4 py-3 text-right text-xs font-semibold text-stone-500">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-stone-100">
-                {productosFiltrados.map((p) => {
-                  const sId = p.socio_id ?? p.socioId;
-                  const precio = p.precio_referencia ?? p.precioReferencia;
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-stone-200 bg-stone-50">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-stone-500">Nombre</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-stone-500">Código</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-stone-500">Socio</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-stone-500">Precio ref.</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-stone-500">Estado</th>
+                <th className="w-24 px-4 py-3 text-right text-xs font-semibold text-stone-500">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-stone-100">
+              {productosFiltrados.map((p) => {
+                const sId = p.socio_id ?? p.socioId;
+                const precio = p.precio_referencia ?? p.precioReferencia;
 
-                  return (
-                    <tr key={p.id} className="hover:bg-stone-50 transition-colors">
-                      <td className="px-4 py-3.5 font-medium text-stone-900">{p.nombre}</td>
-                      <td className="px-4 py-3.5 text-stone-600">
-                        {p.codigo ? (
-                          <span className="rounded bg-stone-100 px-1.5 py-0.5 font-mono text-xs text-stone-700">
-                            {p.codigo}
-                          </span>
-                        ) : (
-                          <span className="italic text-stone-400 text-xs">Sin código</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3.5 text-stone-600">{p.socio?.nombre ?? "—"}</td>
-                      <td className="px-4 py-3.5 text-right font-medium text-stone-900">
-                        {formatoMoneda(precio)}
-                      </td>
-                      <td className="px-4 py-3.5 text-center">
-                        <span
-                          className={
-                            "inline-block rounded-full px-2.5 py-0.5 text-xs font-medium " +
-                            (p.activo ? "bg-emerald-50 text-emerald-700" : "bg-stone-100 text-stone-500")
-                          }
-                        >
-                          {p.activo ? "Activo" : "Inactivo"}
+                return (
+                  <tr key={p.id} className="hover:bg-stone-50 transition-colors">
+                    <td className="px-4 py-3.5 font-medium text-stone-900">{p.nombre}</td>
+                    <td className="px-4 py-3.5 text-stone-600">
+                      {p.codigo ? (
+                        <span className="rounded bg-stone-100 px-1.5 py-0.5 font-mono text-xs text-stone-700">
+                          {p.codigo}
                         </span>
-                      </td>
-                      <td className="px-4 py-3.5 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => editarProducto(p)}
-                            title="Editar producto"
-                            className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-600 hover:bg-stone-100 hover:text-stone-900 transition-colors"
-                          >
-                            <Pencil size={15} />
-                          </button>
-                          <button
-                            onClick={() => alternarEstadoProducto(p)}
-                            title={p.activo ? "Desactivar producto" : "Activar producto"}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 hover:bg-red-50 hover:text-red-600 transition-colors"
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                      ) : (
+                        <span className="italic text-stone-400 text-xs">Sin código</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3.5 text-stone-600">{p.socio?.nombre ?? "—"}</td>
+                    <td className="px-4 py-3.5 text-right font-medium text-stone-900">
+                      {formatoMoneda(precio)}
+                    </td>
+                    <td className="px-4 py-3.5 text-center">
+                      <span
+                        className={
+                          "inline-block rounded-full px-2.5 py-0.5 text-xs font-medium " +
+                          (p.activo ? "bg-emerald-50 text-emerald-700" : "bg-stone-100 text-stone-500")
+                        }
+                      >
+                        {p.activo ? "Activo" : "Inactivo"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => editarProducto(p)}
+                          title="Editar producto"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-600 hover:bg-stone-100 hover:text-stone-900 transition-colors"
+                        >
+                          <Pencil size={15} />
+                        </button>
+                        <button
+                          onClick={() => alternarEstadoProducto(p)}
+                          title={p.activo ? "Desactivar producto" : "Activar producto"}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </main>
   );
