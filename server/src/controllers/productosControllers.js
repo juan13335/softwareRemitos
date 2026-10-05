@@ -44,3 +44,33 @@ export const createProducto = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
+// DESACTIVAR PRODUCTO - PUT /api/productos/:id/desactivar
+// productos.controller.js
+
+export const desactivarProducto = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { data, error } = await supabase
+      .from("productos")
+      .update({ activo: false })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    if (!data) {
+      return res.status(404).json({ error: "Producto no encontrado." });
+    }
+
+    return res.status(200).json({
+      mensaje: "Producto desactivado correctamente.",
+      producto: data,
+    });
+  } catch (error) {
+    console.error("Error al desactivar producto:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
