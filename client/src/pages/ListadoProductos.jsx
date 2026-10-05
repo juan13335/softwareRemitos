@@ -76,11 +76,12 @@ export default function ListadoProductos() {
     const estadoActual = producto.activo;
     const accion = estadoActual ? "desactivar" : "activar";
     const confirmado = window.confirm(`¿Querés ${accion} "${producto.nombre}"?`);
+    const productoId = producto.id;
     if (!confirmado) return;
 
     try {
       // Si ya tenés endpoint de actualización o soft-delete:
-      // await api.patch(`/api/productos/${producto.id}`, { activo: !estadoActual });
+      await api.put(`/productos/${productoId}/desactivar`);
 
       // Actualización optimista en el estado local
       setProductos((prev) =>
